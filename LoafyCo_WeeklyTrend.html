@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LoafyCo — Weekly Sales Trend</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f1117;color:#e8e0d5;font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 20px}
+h1{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px}
+h1 span{color:#2a9d8f}
+.sub{color:#7a8599;font-size:11px;margin-bottom:24px}
+.card{background:#1a1d2e;border:1px solid #2d3561;border-radius:14px;padding:24px;width:100%;max-width:1100px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;align-items:center}
+.ctrl label{font-size:10px;text-transform:uppercase;color:#5a6480;letter-spacing:.4px;margin-right:4px}
+.btn{padding:5px 14px;border-radius:6px;border:1px solid #2d3561;background:#131626;color:#7a8599;cursor:pointer;font-size:11px;font-weight:600;transition:.12s}
+.btn:hover{border-color:#2a9d8f;color:#e8e0d5}
+.btn.on{background:#2a9d8f;color:#fff;border-color:#2a9d8f}
+.btn.line{background:#06d6a022;border-color:#06d6a0;color:#06d6a0}
+.btn.line.on{background:#06d6a0;color:#0f1117}
+.btn.purple{background:#c77dff22;border-color:#c77dff;color:#c77dff}
+.btn.purple.on{background:#c77dff;color:#0f1117}
+.btn.red{background:#ef476f22;border-color:#ef476f;color:#ef476f}
+.btn.red.on{background:#ef476f;color:#fff}
+.divider{width:1px;height:24px;background:#2d3561;margin:0 4px}
+.stat-row{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+.stat{background:#131626;border:1px solid #2d3561;border-radius:8px;padding:10px 16px;min-width:140px}
+.stat .lbl{font-size:9px;text-transform:uppercase;color:#5a6480;letter-spacing:.4px;margin-bottom:3px}
+.stat .val{font-size:16px;font-weight:700}
+.stat .val.up{color:#06d6a0}.stat .val.dn{color:#ef476f}.stat .val.neu{color:#f9a825}
+canvas{width:100%!important}
+</style>
+</head>
+<body>
+
+<h1>LoafyCo — <span>Weekly Sales Trend</span></h1>
+<p class="sub">ยอดขายรายสัปดาห์ · Trendline · MA7 · MA14 · ทุกสาขารวมกัน</p>
+
+<div class="card">
+  <div class="ctrl">
+    <label>Metric</label>
+    <button class="btn on" id="m_units"   onclick="setMetric('units')">Units</button>
+    <button class="btn"    id="m_revenue" onclick="setMetric('revenue')">Revenue (฿)</button>
+    <div class="divider"></div>
+    <label>มุมมอง</label>
+    <button class="btn on" id="v_weekly" onclick="setView('weekly')">ราย Week (bars)</button>
+    <button class="btn"    id="v_daily"  onclick="setView('daily')">รายวัน (bars)</button>
+    <div class="divider"></div>
+    <label>Overlay</label>
+    <button class="btn line on"   id="t_ma7"    onclick="toggle('ma7')">MA7</button>
+    <button class="btn purple on" id="t_ma14"   onclick="toggle('ma14')">MA14</button>
+    <button class="btn red on"    id="t_trend"  onclick="toggle('trend')">Trendline</button>
+  </div>
+
+  <div class="stat-row" id="stats"></div>
+
+  <canvas id="chart" height="70"></canvas>
+</div>
+
+<script>
+const D = {"dates":["2026-01-01","2026-01-02","2026-01-03","2026-01-04","2026-01-05","2026-01-06","2026-01-07","2026-01-08","2026-01-09","2026-01-10","2026-01-11","2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-16","2026-01-17","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-23","2026-01-24","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31","2026-02-01","2026-02-02","2026-02-03","2026-02-04","2026-02-05","2026-02-06","2026-02-07","2026-02-08","2026-02-09","2026-02-10","2026-02-11","2026-02-12","2026-02-13","2026-02-14","2026-02-15","2026-02-16","2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-21","2026-02-22","2026-02-23","2026-02-24","2026-02-25","2026-02-26","2026-02-27","2026-02-28","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20","2026-03-21","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-27","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-11","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18","2026-04-19","2026-04-20","2026-04-21"],"units":[2803,2202,3250,3224,2397,2245,2374,2502,2519,2973,2954,2321,2112,2356,2466,2499,3189,3088,2147,2078,2113,2371,2530,3305,3343,2564,2636,2367,2697,2661,3293,3344,2389,2413,2373,2406,2962,3374,3259,2142,2282,2342,2504,2354,3216,2987,1724,2252,2058,2121,2584,3190,3421,2159,2126,2141,2297,2715,3403,3296,2201,2911,2063,2097,2453,3096,3079,2071,2092,1930,2035,2197,3102,2988,1909,1955,2026,2175,2243,3050,2955,1862,1821,1955,1906,2772,3542,3679,2545,2831,2843,1939,1972,2753,2724,2109,1510,1742,1774,2044,2833,2715,2763,2740,2598,1898,1996,2613,2703,1623,1787],"revenue":[275765,219675,322008,328925,229638,218565,225295,238295,246575,301860,293620,228705,211295,232810,247625,253355,326940,316555,216915,213100,215198,237822,257792,339925,335812,254848,257900,237115,278010,272652,341580,338542,240890,245630,239060,245480,301930,342675,336725,217600,233160,233788,246245,236070,324705,296690,164998,224385,199975,208035,259520,317290,344990,213210,214125,214080,229680,271282,343600,328602,218365,293450,207910,205475,244845,309290,308685,203375,216340,190625,198415,222235,305475,301292,191380,195310,196582,226145,219615,306450,292000,184180,176960,193992,188540,270150,345970,368645,254400,286932,284055,193725,194788,271642,269320,211255,143910,169430,175060,202882,283322,270942,280752,271455,265990,185155,198970,257680,267510,160400,178315],"ma7_u":[null,null,null,null,null,null,2642.1,2599.1,2644.4,2604.9,2566.3,2555.4,2536.4,2533.9,2528.7,2525.9,2556.7,2575.9,2551.0,2546.1,2511.4,2497.9,2502.3,2518.9,2555.3,2614.9,2694.6,2730.9,2777.4,2796.1,2794.4,2794.6,2769.6,2737.7,2738.6,2697.0,2740.0,2751.6,2739.4,2704.1,2685.4,2681.0,2695.0,2608.1,2585.6,2546.7,2487.0,2482.7,2442.1,2387.4,2420.3,2416.6,2478.6,2540.7,2522.7,2534.6,2559.7,2578.4,2608.9,2591.0,2597.0,2709.1,2698.0,2669.4,2632.0,2588.1,2557.1,2538.6,2421.6,2402.6,2393.7,2357.1,2358.0,2345.0,2321.9,2302.3,2316.0,2336.0,2342.6,2335.1,2330.4,2323.7,2304.6,2294.4,2256.0,2331.6,2401.9,2505.3,2602.9,2747.1,2874.0,2878.7,2764.4,2651.7,2515.3,2453.0,2264.3,2107.0,2083.4,2093.7,2105.1,2103.9,2197.3,2373.0,2495.3,2513.0,2506.1,2474.7,2473.0,2310.1,2174.0],"ma14_u":[null,null,null,null,null,null,null,null,null,null,null,null,null,2588.0,2563.9,2585.1,2580.8,2571.1,2553.2,2541.3,2522.6,2513.3,2514.1,2537.8,2565.6,2582.9,2620.4,2621.1,2637.6,2649.2,2656.6,2674.9,2692.2,2716.1,2734.7,2737.2,2768.1,2773.0,2767.0,2736.9,2711.6,2709.8,2696.0,2674.1,2668.6,2643.1,2595.6,2584.1,2561.6,2541.2,2514.2,2501.1,2512.6,2513.9,2502.7,2488.4,2473.6,2499.4,2512.7,2534.8,2568.9,2615.9,2616.3,2614.6,2605.2,2598.5,2574.1,2567.8,2565.4,2550.3,2531.6,2494.6,2473.1,2451.1,2430.2,2361.9,2359.3,2364.9,2349.9,2346.6,2337.7,2322.8,2303.4,2305.2,2296.0,2337.1,2368.5,2417.9,2463.3,2525.9,2584.2,2567.4,2548.0,2526.8,2510.3,2527.9,2505.7,2490.5,2481.1,2429.1,2378.4,2309.6,2325.1,2318.6,2301.1,2298.2,2299.9,2289.9,2288.4,2253.7,2273.5],"ma7_r":[null,null,null,null,null,null,259981.6,254628.7,258471.6,255593.3,250549.7,250416.4,249377.9,250451.4,251784.3,252752.9,256335.7,259612.1,257927.9,258185.7,255669.7,254269.3,254903.1,256758.1,259509.1,264928.1,271328.1,274459.1,280200.3,282323.1,282559.6,282949.6,280955.6,279202.7,279480.6,274833.4,279016.0,279172.4,278912.9,275585.7,273804.3,273051.1,273160.4,263751.9,261184.7,255465.4,247950.9,246697.3,241866.9,236408.3,239758.3,238699.0,245599.0,252486.4,251020.7,253035.7,256127.9,257808.1,261566.7,259225.6,259962.0,271294.1,270412.7,266954.9,263178.1,258276.7,255431.4,253290.0,242274.3,239805.0,238796.4,235566.4,235021.4,233965.3,232251.7,229247.4,230098.4,234059.9,233685.6,233824.9,232497.4,231468.9,228847.4,228477.4,223105.3,230324.6,235970.3,246919.6,256951.0,272661.3,285527.4,286268.1,275502.1,264883.9,250694.6,244531.0,224099.3,207724.3,205057.9,206214.1,207882.7,208114.4,218042.6,236263.3,250057.6,251499.7,250940.9,247277.7,246787.4,229594.3,216288.6],"ma14_r":[null,null,null,null,null,null,null,null,null,null,null,null,null,255216.5,253206.5,255612.2,255964.5,255080.9,254172.1,253781.8,253060.6,253026.8,253828.0,256546.9,259560.6,261428.0,264756.9,265064.4,267234.8,268613.1,269658.9,271229.4,272941.9,275265.4,276969.9,277516.9,280669.6,280866.0,280931.2,278270.6,276503.5,276265.9,273996.9,271383.9,270178.6,267189.1,261768.3,260250.8,257459.0,254784.4,251755.1,249941.9,250532.2,250218.6,248859.0,247451.3,246268.1,248783.2,250132.9,252412.3,256224.2,261157.4,261724.2,261541.4,260493.1,259921.7,257328.5,256626.0,256784.2,255108.9,252875.6,249372.3,246649.1,244698.4,242770.9,235760.9,234951.7,236428.1,234626.0,234423.1,233231.4,231860.3,229047.4,229287.9,228582.6,232005.1,234897.6,239708.5,244209.9,250754.4,257002.4,254686.7,252913.4,250427.1,248807.1,250741.0,248380.3,246625.9,245663.0,240858.1,236383.3,229404.5,231286.8,230181.3,228890.9,228278.8,228577.5,227580.2,227450.9,223818.4,226275.9],"trend_u":[2707.0,2703.5,2699.9,2696.3,2692.7,2689.1,2685.6,2682.0,2678.4,2674.8,2671.3,2667.7,2664.1,2660.5,2656.9,2653.4,2649.8,2646.2,2642.6,2639.0,2635.5,2631.9,2628.3,2624.7,2621.1,2617.6,2614.0,2610.4,2606.8,2603.3,2599.7,2596.1,2592.5,2588.9,2585.4,2581.8,2578.2,2574.6,2571.0,2567.5,2563.9,2560.3,2556.7,2553.2,2549.6,2546.0,2542.4,2538.8,2535.3,2531.7,2528.1,2524.5,2520.9,2517.4,2513.8,2510.2,2506.6,2503.0,2499.5,2495.9,2492.3,2488.7,2485.2,2481.6,2478.0,2474.4,2470.8,2467.3,2463.7,2460.1,2456.5,2452.9,2449.4,2445.8,2442.2,2438.6,2435.1,2431.5,2427.9,2424.3,2420.7,2417.2,2413.6,2410.0,2406.4,2402.8,2399.3,2395.7,2392.1,2388.5,2385.0,2381.4,2377.8,2374.2,2370.6,2367.1,2363.5,2359.9,2356.3,2352.7,2349.2,2345.6,2342.0,2338.4,2334.8,2331.3,2327.7,2324.1,2320.5,2317.0,2313.4],"trend_r":[271840.8,271459.8,271078.9,270698.0,270317.0,269936.1,269555.2,269174.2,268793.3,268412.4,268031.4,267650.5,267269.6,266888.6,266507.7,266126.8,265745.8,265364.9,264984.0,264603.0,264222.1,263841.2,263460.2,263079.3,262698.3,262317.4,261936.5,261555.5,261174.6,260793.7,260412.7,260031.8,259650.9,259269.9,258889.0,258508.1,258127.1,257746.2,257365.3,256984.3,256603.4,256222.5,255841.5,255460.6,255079.7,254698.7,254317.8,253936.9,253555.9,253175.0,252794.1,252413.1,252032.2,251651.3,251270.3,250889.4,250508.5,250127.5,249746.6,249365.7,248984.7,248603.8,248222.9,247841.9,247461.0,247080.1,246699.1,246318.2,245937.3,245556.3,245175.4,244794.5,244413.5,244032.6,243651.7,243270.7,242889.8,242508.8,242127.9,241747.0,241366.0,240985.1,240604.2,240223.2,239842.3,239461.4,239080.4,238699.5,238318.6,237937.6,237556.7,237175.8,236794.8,236413.9,236033.0,235652.0,235271.1,234890.2,234509.2,234128.3,233747.4,233366.4,232985.5,232604.6,232223.6,231842.7,231461.8,231080.8,230699.9,230319.0,229938.0],"week_labels":["2025-12-29","2026-01-05","2026-01-12","2026-01-19","2026-01-26","2026-02-02","2026-02-09","2026-02-16","2026-02-23","2026-03-02","2026-03-09","2026-03-16","2026-03-23","2026-03-30","2026-04-06","2026-04-13","2026-04-20"],"week_units":[11479,17964,18031,17887,19562,19176,17827,17350,18137,17900,16415,16313,17537,17607,14727,17311,3410],"week_rev":[1146372,1753848,1817285,1816565,1980648,1952390,1788258,1719192,1814580,1788020,1637758,1627482,1728438,1754862,1456802,1727512,338715],"slope_u":-3.58,"slope_r":-380.93,"wma4_u":[null,null,null,16340.2,18361.0,18664.0,18613.0,18478.8,18122.5,17803.5,17450.5,17191.2,17041.2,16968.0,16546.0,16795.5,13263.8],"wma4_r":[null,null,null,1633517.5,1842086.5,1891722.0,1884465.2,1860122.0,1818605.0,1777512.5,1739887.5,1716960.0,1695424.5,1687135.0,1641896.0,1666903.5,1319472.8],"wtrend_u":[18533.5,18265.6,17997.7,17729.8,17461.8,17193.9,16926.0,16658.1,16390.2,16122.3,15854.3,15586.4,15318.5,15050.6,14782.7,14514.8,14246.8],"wtrend_r":[1860371.3,1832595.0,1804818.6,1777042.2,1749265.9,1721489.5,1693713.1,1665936.8,1638160.4,1610384.0,1582607.7,1554831.3,1527055.0,1499278.6,1471502.2,1443725.9,1415949.5],"wslope_u":-267.9,"wslope_r":-27776.4};
+
+Chart.defaults.color = '#7a8599';
+Chart.defaults.font.family = "'Segoe UI',system-ui,sans-serif";
+Chart.defaults.font.size = 11;
+
+let S = { metric:'units', view:'weekly', ma7:true, ma14:true, trend:true };
+let ch = null;
+
+function setMetric(m) {
+  S.metric=m;
+  document.getElementById('m_units').classList.toggle('on',m==='units');
+  document.getElementById('m_revenue').classList.toggle('on',m==='revenue');
+  build();
+}
+function setView(v) {
+  S.view=v;
+  document.getElementById('v_weekly').classList.toggle('on',v==='weekly');
+  document.getElementById('v_daily').classList.toggle('on',v==='daily');
+  build();
+}
+function toggle(key) {
+  S[key]=!S[key];
+  const btn=document.getElementById('t_'+key);
+  btn.classList.toggle('on',S[key]);
+  build();
+}
+
+function build() {
+  const isWeekly = S.view==='weekly';
+  const isUnits  = S.metric==='units';
+
+  const labels  = isWeekly ? D.week_labels : D.dates;
+  const barData = isWeekly
+    ? (isUnits ? D.week_units  : D.week_rev)
+    : (isUnits ? D.units       : D.revenue);
+  const ma7Data = isWeekly
+    ? (isUnits ? D.wma4_u      : D.wma4_r)   // weekly: 4-week MA
+    : (isUnits ? D.ma7_u       : D.ma7_r);
+  const ma14Data = isWeekly
+    ? null
+    : (isUnits ? D.ma14_u      : D.ma14_r);
+  const trendData = isWeekly
+    ? (isUnits ? D.wtrend_u    : D.wtrend_r)
+    : (isUnits ? D.trend_u     : D.trend_r);
+
+  const ma7Label  = isWeekly ? 'MA4 (4 สัปดาห์)' : 'MA7';
+  const ma14Label = 'MA14';
+
+  // Stats
+  const total = barData.reduce((a,b)=>a+(b||0),0);
+  const avg   = total/barData.length;
+  const slope = isWeekly
+    ? (isUnits ? D.wslope_u : D.wslope_r)
+    : (isUnits ? D.slope_u  : D.slope_r);
+  const lastW = barData[barData.length-1]||0;
+  const firstW= barData[0]||0;
+  const chgPct= firstW>0 ? ((lastW-firstW)/firstW*100).toFixed(1) : 0;
+  const unit  = isUnits ? '' : '฿';
+  const fmt   = v => isUnits ? Math.round(v).toLocaleString() : '฿'+Math.round(v).toLocaleString();
+  const trendDir = slope > 50 ? '📈 ขาขึ้น' : slope < -50 ? '📉 ขาลง' : '➡️ ทรงตัว';
+  const trendColor = slope > 50 ? 'up' : slope < -50 ? 'dn' : 'neu';
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="lbl">Total ${isWeekly?'Weekly':'Daily'}</div><div class="val neu">${fmt(total)}</div></div>
+    <div class="stat"><div class="lbl">Avg / ${isWeekly?'Week':'Day'}</div><div class="val">${fmt(avg)}</div></div>
+    <div class="stat"><div class="lbl">สัปดาห์ล่าสุด</div><div class="val">${fmt(lastW)}</div></div>
+    <div class="stat"><div class="lbl">เทรนด์</div><div class="val ${trendColor}">${trendDir} (${slope > 0 ?'+':''}${slope}${isUnits?' units':' ฿'}/${isWeekly?'wk':'day'})</div></div>
+    <div class="stat"><div class="lbl">First→Last Change</div><div class="val ${Number(chgPct)>=0?'up':'dn'}">${chgPct >= 0 ? '+' : ''}${chgPct}%</div></div>
+  `;
+
+  const datasets = [
+    {
+      label: isWeekly ? 'Units/Week' : 'Units/Day',
+      type:'bar',
+      data: barData,
+      backgroundColor: '#2a9d8f55',
+      borderColor: '#2a9d8f',
+      borderWidth: isWeekly ? 2 : 1,
+      borderRadius: isWeekly ? 6 : 2,
+      order: 3,
+    }
+  ];
+
+  if(S.ma7) datasets.push({
+    label: ma7Label,
+    type:'line',
+    data: ma7Data,
+    borderColor: '#06d6a0',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    tension: .4,
+    pointRadius: isWeekly ? 4 : 0,
+    pointHoverRadius: 5,
+    fill: false,
+    order: 2,
+  });
+
+  if(S.ma14 && ma14Data) datasets.push({
+    label: ma14Label,
+    type:'line',
+    data: ma14Data,
+    borderColor: '#c77dff',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    tension: .4,
+    pointRadius: isWeekly ? 4 : 0,
+    pointHoverRadius: 5,
+    fill: false,
+    order: 1,
+  });
+
+  if(S.trend) datasets.push({
+    label: 'Trendline',
+    type:'line',
+    data: trendData,
+    borderColor: '#ef476f',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderDash: [8,4],
+    tension: 0,
+    pointRadius: 0,
+    fill: false,
+    order: 0,
+  });
+
+  const yLabel = isUnits ? 'Units' : 'Revenue (฿)';
+  if(ch) ch.destroy();
+  ch = new Chart(document.getElementById('chart'), {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if(v===null||v===undefined) return null;
+              const prefix = ctx.dataset.label + ': ';
+              return prefix + (isUnits ? Math.round(v).toLocaleString()+' units' : '฿'+Math.round(v).toLocaleString());
+            }
+          }
+        }
+      },
+      scales:{
+        x:{ grid:{ color:'#1e2240' }, ticks:{ maxRotation:45 } },
+        y:{ grid:{ color:'#1e2240' }, title:{ display:true, text:yLabel } }
+      }
+    }
+  });
+}
+
+build();
+</script>
+</body>
+</html>

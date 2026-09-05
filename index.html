@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoafyCo Dashboards</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f1117;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 40px 20px;
+  }
+  .logo {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f59e0b;
+    letter-spacing: -0.5px;
+  }
+  .subtitle {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    margin-top: -20px;
+  }
+  .cards {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .card {
+    background: #1e2240;
+    border: 1px solid #2d3561;
+    border-radius: 16px;
+    padding: 32px 36px;
+    width: 280px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: #f59e0b;
+    box-shadow: 0 8px 32px rgba(245,158,11,0.15);
+  }
+  .card-icon { font-size: 2rem; }
+  .card-title { font-size: 1.1rem; font-weight: 600; }
+  .card-desc { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; }
+  .footer {
+    font-size: 0.8rem;
+    color: #475569;
+  }
+</style>
+</head>
+<body>
+  <div class="logo">🥐 LoafyCo</div>
+  <p class="subtitle">Central Kitchen Analytics</p>
+  <div class="cards">
+    <a class="card" href="LoafyCo_Production_Dashboard.html">
+      <div class="card-icon">🏭</div>
+      <div class="card-title">Production Planning</div>
+      <div class="card-desc">ยอดขายรายวัน · แผนการผลิต WD/WE · Growth Planning</div>
+    </a>
+    <a class="card" href="LoafyCo_SalesChannel_Dashboard.html">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Sales Channel</div>
+      <div class="card-desc">หน้าร้าน vs Delivery · Grab · LINE MAN · ShopeeFood</div>
+    </a>
+    <a class="card" href="LoafyCo_Kitchen_Dashboard.html">
+      <div class="card-icon">🍳</div>
+      <div class="card-title">Kitchen Dashboard</div>
+      <div class="card-desc">ยอดขาย (Units) · Hourly Heatmap · Peak Hour Production</div>
+    </a>
+    <a class="card" href="LoafyCo_ProductionPlan_Dashboard.html">
+      <div class="card-icon">📋</div>
+      <div class="card-title">Production Plan</div>
+      <div class="card-desc">แผนผลิตวัตถุดิบ/โด · Daily Fresh vs เติมสต็อก · ปรับ Buffer ได้</div>
+    </a>
+  </div>
+  <p class="footer" id="footStats">ข้อมูล: 1 ม.ค. 2569 – 5 ก.ย. 2569 · 8 สาขา · 36 สินค้า</p>
+</body>
+</html>

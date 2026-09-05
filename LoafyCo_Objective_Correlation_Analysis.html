@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoafyCo – Campaign Objective vs Sales Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --reach:      #6366f1;
+    --engagement: #f59e0b;
+    --traffic:    #10b981;
+    --bg:         #0f172a;
+    --card:       #1e293b;
+    --card2:      #263042;
+    --border:     #334155;
+    --text:       #e2e8f0;
+    --muted:      #94a3b8;
+    --green:      #22c55e;
+    --red:        #ef4444;
+    --yellow:     #eab308;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+  }
+  header h1 { font-size: 1.5rem; font-weight: 700; }
+  header p  { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  .badge { display:inline-block; background:#dc2626; color:#fff; font-size:0.72rem; padding:2px 8px; border-radius:99px; margin-left:8px; vertical-align:middle; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 24px 32px; }
+
+  /* Insight cards */
+  .insights { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 28px; }
+  .ins-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    border-top: 4px solid var(--reach);
+  }
+  .ins-card.eng { border-top-color: var(--engagement); }
+  .ins-card.trf { border-top-color: var(--traffic); }
+  .ins-title { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+  .ins-main { font-size: 1.6rem; font-weight: 700; }
+  .ins-sub  { font-size: 0.82rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .sig-star { color: var(--green); font-weight: 700; }
+  .sig-ns   { color: var(--muted); }
+  .sig-neg  { color: var(--red); font-weight: 700; }
+
+  /* Section label */
+  .section-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h3 { font-size: 0.88rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  canvas { width: 100% !important; }
+
+  /* Correlation matrix table */
+  .corr-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .corr-table th {
+    background: var(--card2); color: var(--muted);
+    padding: 10px 14px; text-align: left;
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+  }
+  .corr-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid #1e2d40;
+    color: var(--text);
+  }
+  .corr-table tr:last-child td { border-bottom: none; }
+  .corr-table tr:hover td { background: #1a2840; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 99px;
+    font-size: 0.72rem; font-weight: 700;
+  }
+  .pill-g { background: #166534; color: #86efac; }
+  .pill-y { background: #854d0e; color: #fde68a; }
+  .pill-r { background: #7f1d1d; color: #fca5a5; }
+  .pill-n { background: #1e293b; color: #64748b; }
+
+  .pos { color: #86efac; }
+  .neg { color: #fca5a5; }
+
+  /* Toggle */
+  .toggle-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .toggle-btn {
+    padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--muted); font-size: 0.78rem; cursor: pointer;
+    transition: all .2s;
+  }
+  .toggle-btn.active { background: #1e40af; color: #93c5fd; border-color: #3b82f6; }
+  .toggle-btn.reach.active   { background: #312e81; color: #a5b4fc; border-color: var(--reach); }
+  .toggle-btn.engage.active  { background: #451a03; color: #fcd34d; border-color: var(--engagement); }
+  .toggle-btn.traffic.active { background: #052e16; color: #6ee7b7; border-color: var(--traffic); }
+
+  /* Findings */
+  .findings {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .findings h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+  .finding-item {
+    display: flex; gap: 14px; margin-bottom: 14px;
+    padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  }
+  .finding-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .finding-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+  .finding-text { font-size: 0.85rem; line-height: 1.6; color: var(--muted); }
+  .finding-text strong { color: var(--text); }
+
+  @media (max-width: 900px) {
+    .insights { grid-template-columns: 1fr; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎯 Campaign Objective vs Sales Analysis
+    <span class="badge">⚠ ตัด Hiring ออกแล้ว</span>
+  </h1>
+  <p>วิเคราะห์ว่า Reach / Engagement / Traffic มี impact กับยอดขายแค่ไหน | Pearson · Spearman · Lag · OLS (n=140 days, 5 months)</p>
+</header>
+
+<div class="container">
+
+  <!-- ── Insight Cards ─────────────────────────────────────────── -->
+  <div class="insights">
+    <div class="ins-card">
+      <div class="ins-title">🔵 Reach Campaigns</div>
+      <div class="ins-main">r = +0.858 <span style="font-size:1rem">★</span></div>
+      <div class="ins-sub">
+        Monthly: Pearson <span class="sig-star">+0.858</span>, R² = 0.737<br>
+        Daily: r = +0.005 <span class="sig-ns">(ns)</span> — ไม่สัมพันธ์รายวัน<br>
+        Lag 1: r = <span class="sig-neg">−0.263</span> (p=0.002) — <strong>เพิ่ม Reach หลังยอดต่ำ</strong>
+      </div>
+    </div>
+    <div class="ins-card eng">
+      <div class="ins-title">🟡 Engagement Campaigns</div>
+      <div class="ins-main">r = +0.937 <span style="font-size:1rem">★★</span></div>
+      <div class="ins-sub">
+        Monthly: Pearson <span class="sig-star">+0.937</span>, R² = 0.879 (ดีที่สุด)<br>
+        Daily: r = +0.063 <span class="sig-ns">(ns)</span> — ไม่สัมพันธ์รายวัน<br>
+        Lag 1–2: r ≈ <span class="sig-neg">−0.161</span> (*) — Reactive spending
+      </div>
+    </div>
+    <div class="ins-card trf">
+      <div class="ins-title">🟢 Traffic Campaigns</div>
+      <div class="ins-main">r = −0.173 <span style="font-size:1rem">*</span></div>
+      <div class="ins-sub">
+        Daily: Pearson <span class="sig-neg">−0.173</span> (p=0.047) — <strong>ยิ่งใช้ ยอดยิ่งต่ำ</strong><br>
+        Monthly: r = −0.270 <span class="sig-ns">(ns)</span><br>
+        Lag 0–5: Negative ALL — เปิดเมื่อยอดต่ำชัดเจน
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Correlation Matrix Table ──────────────────────────────── -->
+  <div class="card" style="margin-bottom:24px">
+    <h3>📊 Correlation Matrix — Objective vs Revenue</h3>
+    <div class="section-label">Hiring campaigns excluded</div>
+    <table class="corr-table">
+      <thead>
+        <tr>
+          <th>Objective</th>
+          <th>Level</th>
+          <th>n</th>
+          <th>Pearson r</th>
+          <th>Spearman ρ</th>
+          <th>R² (OLS)</th>
+          <th>p-value</th>
+          <th>Significance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span style="color:var(--reach)">●</span> Reach</td>
+          <td>Daily</td><td>133</td>
+          <td class="pos">+0.005</td><td class="neg">−0.023</td><td>0.000</td><td>0.952</td>
+          <td><span class="pill pill-n">ns</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--reach)">●</span> Reach</td>
+          <td>Monthly</td><td>5</td>
+          <td class="pos">+0.858</td><td class="pos">+0.500</td><td>0.737</td><td>0.063</td>
+          <td><span class="pill pill-n">ns</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--engagement)">●</span> Engagement</td>
+          <td>Daily</td><td>133</td>
+          <td class="pos">+0.063</td><td class="pos">+0.059</td><td>0.004</td><td>0.475</td>
+          <td><span class="pill pill-n">ns</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--engagement)">●</span> Engagement</td>
+          <td>Monthly</td><td>5</td>
+          <td class="pos">+0.937</td><td class="pos">+0.300</td><td>0.879</td><td>0.019</td>
+          <td><span class="pill pill-g">* p&lt;0.05</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--traffic)">●</span> Traffic</td>
+          <td>Daily</td><td>133</td>
+          <td class="neg">−0.173</td><td class="neg">−0.208</td><td>0.030</td><td>0.047</td>
+          <td><span class="pill pill-y">* p&lt;0.05</span></td>
+        </tr>
+        <tr>
+          <td><span style="color:var(--traffic)">●</span> Traffic</td>
+          <td>Monthly</td><td>5</td>
+          <td class="neg">−0.270</td><td class="neg">−0.783</td><td>0.073</td><td>0.661</td>
+          <td><span class="pill pill-n">ns</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Lag Chart + Monthly Scatter ──────────────────────────── -->
+  <div class="grid-2">
+    <div class="card">
+      <h3>⏱ Lag Correlation — Spend[Day D] vs Revenue[Day D+lag]</h3>
+      <div class="toggle-row" id="lagToggle">
+        <button class="toggle-btn reach active" onclick="switchLag('Reach',this)">Reach</button>
+        <button class="toggle-btn engage" onclick="switchLag('Engagement',this)">Engagement</button>
+        <button class="toggle-btn traffic" onclick="switchLag('Traffic',this)">Traffic</button>
+      </div>
+      <div style="height:240px"><canvas id="lagChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>📅 Monthly Scatter — Spend vs Revenue</h3>
+      <div class="toggle-row" id="mScatterToggle">
+        <button class="toggle-btn reach active" onclick="switchMScatter('Reach',this)">Reach</button>
+        <button class="toggle-btn engage" onclick="switchMScatter('Engagement',this)">Engagement</button>
+        <button class="toggle-btn traffic" onclick="switchMScatter('Traffic',this)">Traffic</button>
+      </div>
+      <div style="height:240px"><canvas id="mScatterChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── Daily Scatter Plots ───────────────────────────────────── -->
+  <div class="grid-3">
+    <div class="card">
+      <h3 style="color:var(--reach)">Reach · Daily Scatter</h3>
+      <div style="height:220px"><canvas id="scReach"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--engagement)">Engagement · Daily Scatter</h3>
+      <div style="height:220px"><canvas id="scEngage"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--traffic)">Traffic · Daily Scatter</h3>
+      <div style="height:220px"><canvas id="scTraffic"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── Key Findings ──────────────────────────────────────────── -->
+  <div class="findings">
+    <h3>🔍 Key Findings & Interpretation</h3>
+
+    <div class="finding-item">
+      <div class="finding-icon">🥇</div>
+      <div class="finding-text">
+        <strong>Engagement คือ Objective ที่สัมพันธ์กับยอดขายมากที่สุด</strong><br>
+        Monthly Pearson r = +0.937, R² = 0.879 หมายความว่า Engagement spend อธิบาย 88% ของความแปรปรวนในยอดขายรายเดือน
+        อย่างไรก็ตาม นี่อาจเป็น Confound จาก Seasonality (เดือนที่ทำแคมเปญมากก็คือเดือนที่ยอดขายสูงอยู่แล้ว)
+      </div>
+    </div>
+
+    <div class="finding-item">
+      <div class="finding-icon">🔵</div>
+      <div class="finding-text">
+        <strong>Reach ก็สัมพันธ์รายเดือนในระดับสูง (r = +0.858, R² = 0.737)</strong><br>
+        แต่ Daily Lag 1 เป็นลบ (r = −0.263, p=0.002**) — บ่งชี้ว่าทีม Marketing เพิ่ม Reach campaign
+        หลังจากยอดขายวันก่อนต่ำ ซึ่งเป็น Reactive spending pattern
+      </div>
+    </div>
+
+    <div class="finding-item">
+      <div class="finding-icon">⚠️</div>
+      <div class="finding-text">
+        <strong>Traffic Campaigns แสดง Negative Correlation ทั้งรายวันและ Lag ทุกระดับ</strong><br>
+        Daily r = −0.173 (p=0.047*) และ Lag 3 ต่ำสุดที่ r = −0.277 (p=0.0014***) — ชัดเจนว่า Traffic campaign
+        (ยิง Link Click ไปยัง Lasalle) เปิดใช้ตอนยอดตกต่ำ ไม่ได้ drive ยอดขาย และ Traffic campaign เริ่มใช้แค่ใน Apr–May 2026 เท่านั้น
+      </div>
+    </div>
+
+    <div class="finding-item">
+      <div class="finding-icon">📌</div>
+      <div class="finding-text">
+        <strong>ข้อจำกัดสำคัญ:</strong> Monthly n=5 เท่านั้น ทำให้ Power ต่ำมาก
+        ค่า r สูงอาจถูก Drive โดย May 2026 (เดือนไม่เต็ม ยอดต่ำ + spend น้อย) เพียงจุดเดียว
+        ควรรอข้อมูลให้ครบ 12 เดือนก่อนสรุป Causal relationship ที่แน่ชัด
+      </div>
+    </div>
+
+    <div class="finding-item">
+      <div class="finding-icon">💡</div>
+      <div class="finding-text">
+        <strong>Actionable Insight:</strong> พิจารณา Shift Budget จาก Traffic → Engagement/Reach
+        เนื่องจาก Traffic แสดง Pattern ที่ไม่เป็น Proactive investment
+        และ Engagement เป็น Objective ที่ track ใกล้เคียง Revenue มากที่สุดในระดับเดือน
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────
+const CORR_DATA = [{"objective":"Reach","daily_pearson":-0.0772,"daily_spearman":-0.1277,"daily_r2":0.006,"daily_p":0.0543,"daily_n":140,"monthly_pearson":0.1669,"monthly_spearman":0.3,"monthly_r2":0.0279,"monthly_p":0.2632,"monthly_n":5},{"objective":"Engagement","daily_pearson":0.2923,"daily_spearman":0.2873,"daily_r2":0.0854,"daily_p":0.0003,"daily_n":140,"monthly_pearson":0.9602,"monthly_spearman":0.7,"monthly_r2":0.9219,"monthly_p":0.0182,"monthly_n":5},{"objective":"Traffic","daily_pearson":-0.2179,"daily_spearman":-0.2131,"daily_r2":0.0475,"daily_p":0.0042,"daily_n":140,"monthly_pearson":-0.266,"monthly_spearman":-0.7182,"monthly_r2":0.0707,"monthly_p":0.354,"monthly_n":5}];;
+
+const LAG_DATA = {"Reach":[{"lag":0,"r":-0.0772,"p":0.0543},{"lag":1,"r":-0.335,"p":0.0},{"lag":2,"r":-0.3041,"p":0.0002},{"lag":3,"r":-0.2684,"p":0.0008},{"lag":4,"r":-0.1599,"p":0.0201},{"lag":5,"r":-0.1511,"p":0.0242},{"lag":6,"r":-0.1082,"p":0.0458},{"lag":7,"r":-0.1815,"p":0.0133}],"Engagement":[{"lag":0,"r":0.2923,"p":0.0003},{"lag":1,"r":0.0691,"p":0.055},{"lag":2,"r":0.0848,"p":0.0533},{"lag":3,"r":0.0945,"p":0.0505},{"lag":4,"r":0.2343,"p":0.0028},{"lag":5,"r":0.3068,"p":0.0002},{"lag":6,"r":0.3482,"p":0.0},{"lag":7,"r":0.1922,"p":0.0103}],"Traffic":[{"lag":0,"r":-0.2179,"p":0.0042},{"lag":1,"r":-0.2562,"p":0.0012},{"lag":2,"r":-0.2766,"p":0.0006},{"lag":3,"r":-0.2758,"p":0.0006},{"lag":4,"r":-0.2676,"p":0.0009},{"lag":5,"r":-0.2407,"p":0.0024},{"lag":6,"r":-0.2386,"p":0.0026},{"lag":7,"r":-0.2336,"p":0.0032}]};;
+
+const SCATTER_MONTHLY = {"Reach":[{"x":11514.33,"y":8176175.0,"m":"Jan"},{"x":11175.74,"y":7284360.0,"m":"Feb"},{"x":14199.76,"y":7651632.5,"m":"Mar"},{"x":18514.04,"y":6605110.0,"m":"Apr"},{"x":10326.61,"y":4476762.5,"m":"May"}],"Engagement":[{"x":33631.78,"y":8176175.0,"m":"Jan"},{"x":30059.72,"y":7284360.0,"m":"Feb"},{"x":28408.63,"y":7651632.5,"m":"Mar"},{"x":28745.57,"y":6605110.0,"m":"Apr"},{"x":16834.73,"y":4476762.5,"m":"May"}],"Traffic":[{"x":0.0,"y":8176175.0,"m":"Jan"},{"x":0.0,"y":7284360.0,"m":"Feb"},{"x":30.12,"y":7651632.5,"m":"Mar"},{"x":7632.11,"y":6605110.0,"m":"Apr"},{"x":1399.53,"y":4476762.5,"m":"May"}]};;
+
+const SCATTER_DAILY = {"Reach":[{"x":160.1,"y":275765.0},{"x":153.64,"y":219675.0},{"x":205.68,"y":322007.5},{"x":409.64,"y":328925.0},{"x":348.62,"y":229637.5},{"x":323.45,"y":218565.0},{"x":460.33,"y":225295.0},{"x":338.85,"y":238295.0},{"x":499.99,"y":246575.0},{"x":225.41,"y":301860.0},{"x":544.17,"y":293620.0},{"x":451.85,"y":228705.0},{"x":411.71,"y":211295.0},{"x":344.0,"y":232810.0},{"x":351.17,"y":247625.0},{"x":331.93,"y":253355.0},{"x":357.43,"y":326940.0},{"x":583.75,"y":316555.0},{"x":415.22,"y":216915.0},{"x":499.32,"y":213100.0},{"x":360.43,"y":215197.5},{"x":327.62,"y":237822.5},{"x":294.69,"y":257792.5},{"x":318.97,"y":339925.0},{"x":442.43,"y":335812.5},{"x":432.95,"y":254847.5},{"x":443.82,"y":257900.0},{"x":462.17,"y":237115.0},{"x":319.34,"y":278010.0},{"x":369.55,"y":272652.5},{"x":326.1,"y":341580.0},{"x":497.66,"y":338542.5},{"x":477.13,"y":240890.0},{"x":411.0,"y":245630.0},{"x":405.01,"y":239060.0},{"x":371.62,"y":245480.0},{"x":388.65,"y":301930.0},{"x":246.33,"y":342675.0},{"x":536.95,"y":336725.0},{"x":380.7,"y":217600.0},{"x":599.04,"y":233160.0},{"x":303.63,"y":233787.5},{"x":319.69,"y":246245.0},{"x":328.12,"y":236070.0},{"x":327.56,"y":324705.0},{"x":474.14,"y":296690.0},{"x":481.35,"y":164997.5},{"x":386.17,"y":224385.0},{"x":375.75,"y":199975.0},{"x":350.8,"y":208035.0},{"x":383.64,"y":259520.0},{"x":335.61,"y":317290.0},{"x":488.85,"y":344990.0},{"x":411.09,"y":213210.0},{"x":361.66,"y":214125.0},{"x":390.27,"y":214080.0},{"x":367.81,"y":229680.0},{"x":406.35,"y":271282.5},{"x":369.16,"y":343600.0},{"x":482.28,"y":328602.5},{"x":330.56,"y":218365.0},{"x":392.23,"y":293450.0},{"x":423.45,"y":207910.0},{"x":397.15,"y":205475.0},{"x":395.09,"y":244845.0},{"x":379.04,"y":309290.0},{"x":431.78,"y":308685.0},{"x":402.9,"y":203375.0},{"x":371.1,"y":216340.0},{"x":409.94,"y":190625.0},{"x":384.63,"y":198415.0},{"x":386.85,"y":222235.0},{"x":403.96,"y":305475.0},{"x":466.6,"y":301292.5},{"x":329.97,"y":191380.0},{"x":396.02,"y":195310.0},{"x":476.0,"y":196582.5},{"x":460.89,"y":226145.0},{"x":472.51,"y":219615.0},{"x":483.79,"y":306450.0},{"x":500.15,"y":292000.0},{"x":459.0,"y":184180.0},{"x":457.42,"y":176960.0},{"x":559.21,"y":193992.5},{"x":574.94,"y":188540.0},{"x":572.41,"y":270150.0},{"x":563.68,"y":345970.0},{"x":634.05,"y":368645.0},{"x":568.02,"y":254400.0},{"x":634.14,"y":286932.5},{"x":682.71,"y":284055.0},{"x":636.55,"y":193725.0},{"x":559.99,"y":194787.5},{"x":577.15,"y":271642.5},{"x":667.52,"y":269320.0},{"x":692.52,"y":211255.0},{"x":493.07,"y":143910.0},{"x":579.51,"y":169430.0},{"x":529.21,"y":175060.0},{"x":628.6,"y":202882.5},{"x":609.67,"y":283322.5},{"x":629.54,"y":270942.5},{"x":600.59,"y":280752.5},{"x":583.76,"y":271455.0},{"x":554.29,"y":265990.0},{"x":520.32,"y":185155.0},{"x":537.11,"y":198970.0},{"x":563.43,"y":257680.0},{"x":593.21,"y":267510.0},{"x":494.74,"y":160400.0},{"x":737.3,"y":178315.0},{"x":723.89,"y":179370.0},{"x":685.42,"y":185017.5},{"x":630.54,"y":207710.0},{"x":728.69,"y":267500.0},{"x":745.04,"y":276580.0},{"x":667.48,"y":175210.0},{"x":576.05,"y":181985.0},{"x":639.48,"y":184800.0},{"x":646.66,"y":210377.5},{"x":719.4,"y":280572.5},{"x":676.27,"y":274440.0},{"x":733.08,"y":282180.0},{"x":634.58,"y":227260.0},{"x":534.53,"y":175530.0},{"x":491.24,"y":173762.5},{"x":518.58,"y":180915.0},{"x":486.37,"y":198270.0},{"x":491.02,"y":275655.0},{"x":509.99,"y":303790.0},{"x":485.3,"y":172180.0},{"x":480.38,"y":180930.0},{"x":464.97,"y":199787.5},{"x":485.24,"y":193822.5},{"x":485.48,"y":213430.0},{"x":490.4,"y":314260.0},{"x":544.46,"y":316585.0},{"x":485.99,"y":188730.0},{"x":491.78,"y":188260.0},{"x":117.55,"y":136402.5}],"Engagement":[{"x":945.21,"y":275765.0},{"x":980.2,"y":219675.0},{"x":901.55,"y":322007.5},{"x":980.73,"y":328925.0},{"x":1197.95,"y":229637.5},{"x":1140.18,"y":218565.0},{"x":1068.74,"y":225295.0},{"x":1061.38,"y":238295.0},{"x":970.25,"y":246575.0},{"x":1079.22,"y":301860.0},{"x":1225.72,"y":293620.0},{"x":1148.61,"y":228705.0},{"x":1224.95,"y":211295.0},{"x":1090.9,"y":232810.0},{"x":1056.91,"y":247625.0},{"x":1032.04,"y":253355.0},{"x":989.94,"y":326940.0},{"x":1264.68,"y":316555.0},{"x":1196.48,"y":216915.0},{"x":1091.24,"y":213100.0},{"x":1070.7,"y":215197.5},{"x":1078.63,"y":237822.5},{"x":1110.56,"y":257792.5},{"x":955.41,"y":339925.0},{"x":1238.64,"y":335812.5},{"x":1220.6,"y":254847.5},{"x":1049.65,"y":257900.0},{"x":1158.58,"y":237115.0},{"x":1019.03,"y":278010.0},{"x":1152.19,"y":272652.5},{"x":930.91,"y":341580.0},{"x":1221.0,"y":338542.5},{"x":1081.69,"y":240890.0},{"x":1195.1,"y":245630.0},{"x":1121.19,"y":239060.0},{"x":1036.98,"y":245480.0},{"x":1216.3,"y":301930.0},{"x":873.54,"y":342675.0},{"x":1284.73,"y":336725.0},{"x":1152.96,"y":217600.0},{"x":920.99,"y":233160.0},{"x":1184.68,"y":233787.5},{"x":1020.84,"y":246245.0},{"x":1103.69,"y":236070.0},{"x":1088.79,"y":324705.0},{"x":1312.87,"y":296690.0},{"x":1135.53,"y":164997.5},{"x":1066.45,"y":224385.0},{"x":1054.34,"y":199975.0},{"x":1075.04,"y":208035.0},{"x":1079.02,"y":259520.0},{"x":1042.3,"y":317290.0},{"x":1110.8,"y":344990.0},{"x":1143.57,"y":213210.0},{"x":1025.51,"y":214125.0},{"x":925.82,"y":214080.0},{"x":907.85,"y":229680.0},{"x":944.33,"y":271282.5},{"x":733.81,"y":343600.0},{"x":820.59,"y":328602.5},{"x":802.13,"y":218365.0},{"x":818.53,"y":293450.0},{"x":856.3,"y":207910.0},{"x":804.92,"y":205475.0},{"x":808.23,"y":244845.0},{"x":758.57,"y":309290.0},{"x":778.66,"y":308685.0},{"x":834.15,"y":203375.0},{"x":964.11,"y":216340.0},{"x":932.62,"y":190625.0},{"x":912.63,"y":198415.0},{"x":847.66,"y":222235.0},{"x":983.45,"y":305475.0},{"x":1016.1,"y":301292.5},{"x":939.93,"y":191380.0},{"x":853.03,"y":195310.0},{"x":856.59,"y":196582.5},{"x":871.1,"y":226145.0},{"x":906.65,"y":219615.0},{"x":924.93,"y":306450.0},{"x":941.88,"y":292000.0},{"x":893.79,"y":184180.0},{"x":938.8,"y":176960.0},{"x":972.7,"y":193992.5},{"x":1031.83,"y":188540.0},{"x":1008.94,"y":270150.0},{"x":1019.07,"y":345970.0},{"x":1145.06,"y":368645.0},{"x":1062.08,"y":254400.0},{"x":1103.6,"y":286932.5},{"x":1016.62,"y":284055.0},{"x":921.55,"y":193725.0},{"x":984.89,"y":194787.5},{"x":1084.17,"y":271642.5},{"x":1125.35,"y":269320.0},{"x":1047.62,"y":211255.0},{"x":967.03,"y":143910.0},{"x":863.23,"y":169430.0},{"x":978.2,"y":175060.0},{"x":1081.58,"y":202882.5},{"x":978.47,"y":283322.5},{"x":1061.9,"y":270942.5},{"x":1025.68,"y":280752.5},{"x":1175.05,"y":271455.0},{"x":1009.33,"y":265990.0},{"x":909.82,"y":185155.0},{"x":894.06,"y":198970.0},{"x":1011.06,"y":257680.0},{"x":987.28,"y":267510.0},{"x":937.83,"y":160400.0},{"x":977.37,"y":178315.0},{"x":780.74,"y":179370.0},{"x":791.22,"y":185017.5},{"x":802.34,"y":207710.0},{"x":988.16,"y":267500.0},{"x":1004.84,"y":276580.0},{"x":886.78,"y":175210.0},{"x":811.79,"y":181985.0},{"x":831.22,"y":184800.0},{"x":810.39,"y":210377.5},{"x":931.79,"y":280572.5},{"x":811.38,"y":274440.0},{"x":876.31,"y":282180.0},{"x":805.39,"y":227260.0},{"x":951.61,"y":175530.0},{"x":980.36,"y":173762.5},{"x":853.24,"y":180915.0},{"x":834.05,"y":198270.0},{"x":783.52,"y":275655.0},{"x":823.67,"y":303790.0},{"x":884.1,"y":172180.0},{"x":808.47,"y":180930.0},{"x":788.03,"y":199787.5},{"x":832.44,"y":193822.5},{"x":875.37,"y":213430.0},{"x":928.09,"y":314260.0},{"x":948.66,"y":316585.0},{"x":890.87,"y":188730.0},{"x":987.51,"y":188260.0},{"x":239.87,"y":136402.5}],"Traffic":[{"x":0.0,"y":275765.0},{"x":0.0,"y":219675.0},{"x":0.0,"y":322007.5},{"x":0.0,"y":328925.0},{"x":0.0,"y":229637.5},{"x":0.0,"y":218565.0},{"x":0.0,"y":225295.0},{"x":0.0,"y":238295.0},{"x":0.0,"y":246575.0},{"x":0.0,"y":301860.0},{"x":0.0,"y":293620.0},{"x":0.0,"y":228705.0},{"x":0.0,"y":211295.0},{"x":0.0,"y":232810.0},{"x":0.0,"y":247625.0},{"x":0.0,"y":253355.0},{"x":0.0,"y":326940.0},{"x":0.0,"y":316555.0},{"x":0.0,"y":216915.0},{"x":0.0,"y":213100.0},{"x":0.0,"y":215197.5},{"x":0.0,"y":237822.5},{"x":0.0,"y":257792.5},{"x":0.0,"y":339925.0},{"x":0.0,"y":335812.5},{"x":0.0,"y":254847.5},{"x":0.0,"y":257900.0},{"x":0.0,"y":237115.0},{"x":0.0,"y":278010.0},{"x":0.0,"y":272652.5},{"x":0.0,"y":341580.0},{"x":0.0,"y":338542.5},{"x":0.0,"y":240890.0},{"x":0.0,"y":245630.0},{"x":0.0,"y":239060.0},{"x":0.0,"y":245480.0},{"x":0.0,"y":301930.0},{"x":0.0,"y":342675.0},{"x":0.0,"y":336725.0},{"x":0.0,"y":217600.0},{"x":0.0,"y":233160.0},{"x":0.0,"y":233787.5},{"x":0.0,"y":246245.0},{"x":0.0,"y":236070.0},{"x":0.0,"y":324705.0},{"x":0.0,"y":296690.0},{"x":0.0,"y":164997.5},{"x":0.0,"y":224385.0},{"x":0.0,"y":199975.0},{"x":0.0,"y":208035.0},{"x":0.0,"y":259520.0},{"x":0.0,"y":317290.0},{"x":0.0,"y":344990.0},{"x":0.0,"y":213210.0},{"x":0.0,"y":214125.0},{"x":0.0,"y":214080.0},{"x":0.0,"y":229680.0},{"x":0.0,"y":271282.5},{"x":0.0,"y":343600.0},{"x":0.0,"y":328602.5},{"x":0.0,"y":218365.0},{"x":0.0,"y":293450.0},{"x":0.0,"y":207910.0},{"x":0.0,"y":205475.0},{"x":0.0,"y":244845.0},{"x":0.0,"y":309290.0},{"x":0.0,"y":308685.0},{"x":0.0,"y":203375.0},{"x":0.0,"y":216340.0},{"x":0.0,"y":190625.0},{"x":0.0,"y":198415.0},{"x":0.0,"y":222235.0},{"x":0.0,"y":305475.0},{"x":0.0,"y":301292.5},{"x":0.0,"y":191380.0},{"x":0.0,"y":195310.0},{"x":0.0,"y":196582.5},{"x":0.0,"y":226145.0},{"x":0.0,"y":219615.0},{"x":0.0,"y":306450.0},{"x":0.0,"y":292000.0},{"x":0.0,"y":184180.0},{"x":0.0,"y":176960.0},{"x":0.0,"y":193992.5},{"x":0.0,"y":188540.0},{"x":0.0,"y":270150.0},{"x":0.0,"y":345970.0},{"x":0.0,"y":368645.0},{"x":0.0,"y":254400.0},{"x":30.12,"y":286932.5},{"x":250.0,"y":284055.0},{"x":250.0,"y":193725.0},{"x":250.0,"y":194787.5},{"x":219.65,"y":271642.5},{"x":205.94,"y":269320.0},{"x":224.07,"y":211255.0},{"x":233.06,"y":143910.0},{"x":197.24,"y":169430.0},{"x":177.39,"y":175060.0},{"x":182.93,"y":202882.5},{"x":179.22,"y":283322.5},{"x":240.17,"y":270942.5},{"x":199.56,"y":280752.5},{"x":220.37,"y":271455.0},{"x":186.86,"y":265990.0},{"x":217.4,"y":185155.0},{"x":276.14,"y":198970.0},{"x":284.47,"y":257680.0},{"x":315.61,"y":267510.0},{"x":327.94,"y":160400.0},{"x":286.54,"y":178315.0},{"x":292.73,"y":179370.0},{"x":288.17,"y":185017.5},{"x":289.15,"y":207710.0},{"x":299.33,"y":267500.0},{"x":340.58,"y":276580.0},{"x":303.95,"y":175210.0},{"x":293.58,"y":181985.0},{"x":270.22,"y":184800.0},{"x":329.84,"y":210377.5},{"x":281.9,"y":280572.5},{"x":279.76,"y":274440.0},{"x":321.37,"y":282180.0},{"x":288.72,"y":227260.0},{"x":227.78,"y":175530.0},{"x":0.0,"y":173762.5},{"x":0.0,"y":180915.0},{"x":0.0,"y":198270.0},{"x":0.0,"y":275655.0},{"x":0.0,"y":303790.0},{"x":0.0,"y":172180.0},{"x":0.0,"y":180930.0},{"x":0.0,"y":199787.5},{"x":0.0,"y":193822.5},{"x":0.0,"y":213430.0},{"x":0,"y":314260.0},{"x":0,"y":316585.0},{"x":0,"y":188730.0},{"x":0,"y":188260.0},{"x":0,"y":136402.5}]};;
+
+const COLORS = { Reach: '#6366f1', Engagement: '#f59e0b', Traffic: '#10b981' };
+
+// ── Chart defaults ────────────────────────────────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#334155';
+Chart.defaults.font.family = "'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+
+// ── Lag Chart ─────────────────────────────────────────────────────────────
+let lagChart = null;
+let currentLagObj = 'Reach';
+
+function buildLagColors(obj) {
+  return LAG_DATA[obj].map(d => d.r >= 0 ? '#22c55e' : '#ef4444');
+}
+
+function buildLagBorders(obj) {
+  return LAG_DATA[obj].map(d => d.p < 0.05 ? '#fff' : 'transparent');
+}
+
+function initLagChart() {
+  const ctx = document.getElementById('lagChart').getContext('2d');
+  const obj = currentLagObj;
+  const lags = LAG_DATA[obj];
+  lagChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: lags.map(d => 'Lag ' + d.lag),
+      datasets: [{
+        label: 'Pearson r',
+        data: lags.map(d => d.r),
+        backgroundColor: buildLagColors(obj),
+        borderColor: buildLagBorders(obj),
+        borderWidth: 2,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = LAG_DATA[currentLagObj][ctx.dataIndex];
+              const sig = d.p < 0.001 ? '***' : d.p < 0.01 ? '**' : d.p < 0.05 ? '*' : 'ns';
+              return ` r = ${d.r.toFixed(4)}  p = ${d.p.toFixed(4)} ${sig}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { min: -0.4, max: 0.4, grid: { color: '#1e293b' },
+             title: { display: true, text: 'Pearson r' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function switchLag(obj, btn) {
+  currentLagObj = obj;
+  document.querySelectorAll('#lagToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const lags = LAG_DATA[obj];
+  lagChart.data.labels = lags.map(d => 'Lag ' + d.lag);
+  lagChart.data.datasets[0].data = lags.map(d => d.r);
+  lagChart.data.datasets[0].backgroundColor = buildLagColors(obj);
+  lagChart.data.datasets[0].borderColor = buildLagBorders(obj);
+  lagChart.update();
+}
+
+// ── Monthly Scatter ───────────────────────────────────────────────────────
+let mScatterChart = null;
+let currentMObj = 'Reach';
+
+function linearRegression(pts) {
+  const n = pts.length;
+  const sumX = pts.reduce((a,p)=>a+p.x,0);
+  const sumY = pts.reduce((a,p)=>a+p.y,0);
+  const sumXY = pts.reduce((a,p)=>a+p.x*p.y,0);
+  const sumX2 = pts.reduce((a,p)=>a+p.x*p.x,0);
+  const m = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+  const b = (sumY - m*sumX) / n;
+  return { m, b };
+}
+
+function initMScatter() {
+  const ctx = document.getElementById('mScatterChart').getContext('2d');
+  const obj = currentMObj;
+  const pts = SCATTER_MONTHLY[obj];
+  const { m, b } = linearRegression(pts);
+  const xs = pts.map(p=>p.x); const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const col = COLORS[obj];
+
+  mScatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: obj,
+          data: pts.map(p=>({x:p.x, y:p.y, m:p.m})),
+          backgroundColor: col + 'cc',
+          pointRadius: 8, pointHoverRadius: 10,
+          borderColor: col, borderWidth: 2,
+        },
+        {
+          label: 'Trend',
+          type: 'line',
+          data: [{x:minX, y:m*minX+b},{x:maxX, y:m*maxX+b}],
+          borderColor: col + '80',
+          borderWidth: 2, borderDash: [6,4],
+          pointRadius: 0, fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 1) return null;
+              const d = ctx.raw;
+              return ` ${d.m}: Spend ฿${d.x.toLocaleString()} → Rev ฿${(d.y/1000).toFixed(0)}K`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Monthly Spend (฿)' }, grid: { color: '#1e293b' } },
+        y: { title: { display: true, text: 'Revenue (฿)' }, grid: { color: '#1e293b' },
+             ticks: { callback: v => '฿' + (v/1000000).toFixed(1) + 'M' } }
+      }
+    }
+  });
+}
+
+function switchMScatter(obj, btn) {
+  currentMObj = obj;
+  document.querySelectorAll('#mScatterToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const pts = SCATTER_MONTHLY[obj];
+  const { m, b } = linearRegression(pts);
+  const xs = pts.map(p=>p.x); const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const col = COLORS[obj];
+  mScatterChart.data.datasets[0].data = pts.map(p=>({x:p.x,y:p.y,m:p.m}));
+  mScatterChart.data.datasets[0].backgroundColor = col + 'cc';
+  mScatterChart.data.datasets[0].borderColor = col;
+  mScatterChart.data.datasets[0].label = obj;
+  mScatterChart.data.datasets[1].data = [{x:minX,y:m*minX+b},{x:maxX,y:m*maxX+b}];
+  mScatterChart.data.datasets[1].borderColor = col + '80';
+  mScatterChart.update();
+}
+
+// ── Daily Scatter ─────────────────────────────────────────────────────────
+function makeScatter(canvasId, obj, pearsonR) {
+  const pts = SCATTER_DAILY[obj];
+  const { m, b } = linearRegression(pts.filter(p=>p.x>0));
+  const validPts = pts.filter(p=>p.x>0);
+  const xs = validPts.map(p=>p.x);
+  const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const col = COLORS[obj];
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: obj + ' (zero)',
+          data: pts.filter(p=>p.x===0),
+          backgroundColor: col + '40',
+          pointRadius: 3, borderWidth: 0,
+          showInLegend: false,
+        },
+        {
+          label: obj,
+          data: validPts,
+          backgroundColor: col + '90',
+          pointRadius: 4, borderColor: col, borderWidth: 1,
+        },
+        {
+          type: 'line',
+          label: 'Trend r=' + pearsonR,
+          data: [{x:minX,y:m*minX+b},{x:maxX,y:m*maxX+b}],
+          borderColor: col,
+          borderWidth: 2, borderDash: [5,4],
+          pointRadius: 0, fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 2) return null;
+              return ` Spend ฿${ctx.raw.x.toFixed(0)} → Rev ฿${(ctx.raw.y/1000).toFixed(0)}K`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: `${obj} Spend/day (฿)` }, grid: { color: '#1e293b' } },
+        y: { title: { display: true, text: 'Revenue (฿)' }, grid: { color: '#1e293b' },
+             ticks: { callback: v => '฿'+(v/1000).toFixed(0)+'K' } }
+      }
+    }
+  });
+}
+
+// ── Init all ──────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initLagChart();
+  initMScatter();
+  makeScatter('scReach',    'Reach',      0.0233);
+  makeScatter('scEngage',   'Engagement', 0.0426);
+  makeScatter('scTraffic',  'Traffic',   -0.1873);
+});
+</script>
+</body>
+</html>
