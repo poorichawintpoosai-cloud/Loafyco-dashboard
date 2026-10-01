@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoafyCo — Channel Correlation Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--s2:#22263a;--border:#2e334d;
+  --accent:#f4a742;--fb:#1877f2;--ig:#e1306c;--kol:#a78bfa;
+  --rev:#34d399;--text:#e8eaf0;--muted:#8892a4;
+  --danger:#f87171;--warn:#fbbf24;--ok:#34d399;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.logo{width:40px;height:40px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.header-title h1{font-size:17px;font-weight:700;}
+.header-title p{font-size:12px;color:var(--muted);margin-top:2px;}
+
+main{padding:24px 32px;max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:22px;}
+
+/* INSIGHT CARDS */
+.insight-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+@media(max-width:1100px){.insight-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.insight-grid{grid-template-columns:1fr;}}
+.insight-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;border-left:4px solid var(--card-color,var(--accent));}
+.insight-rank{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px;}
+.insight-channel{font-size:18px;font-weight:800;margin-bottom:4px;}
+.insight-r{font-size:30px;font-weight:900;letter-spacing:-1px;}
+.insight-desc{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;}
+.sig-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;margin-top:7px;}
+.sig-high{background:rgba(52,211,153,.15);color:#34d399;}
+.sig-mid{background:rgba(251,191,36,.15);color:#fbbf24;}
+.sig-low{background:rgba(248,113,113,.15);color:#f87171;}
+
+/* PANELS */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;}
+.panel-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.panel-sub{font-size:11px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+/* Canvas wrappers — explicit height so charts always render */
+.cw260{width:100%;height:260px;}
+.cw240{width:100%;height:240px;}
+
+/* STAT TABLE */
+.stat-table{width:100%;border-collapse:collapse;font-size:12px;}
+.stat-table th{padding:9px 12px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);font-weight:600;text-align:center;}
+.stat-table th:first-child{text-align:left;}
+.stat-table td{padding:10px 12px;border-bottom:1px solid rgba(46,51,77,.4);text-align:center;font-size:12px;vertical-align:middle;}
+.stat-table td:first-child{text-align:left;font-weight:700;}
+.stat-table tr:hover td{background:rgba(255,255,255,.025);}
+.stat-table tr:last-child td{border-bottom:none;}
+
+/* R bar */
+.r-bar-wrap{display:flex;align-items:center;gap:8px;justify-content:center;}
+.r-bar-track{width:72px;height:7px;background:var(--s2);border-radius:4px;position:relative;flex-shrink:0;}
+.r-bar-fill{height:100%;border-radius:4px;position:absolute;top:0;}
+
+/* TABS */
+.tab-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{padding:5px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* FINDINGS */
+.finding{background:var(--s2);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid var(--fc,var(--accent));}
+.finding-title{font-size:13px;font-weight:700;margin-bottom:5px;}
+.finding-body{font-size:12px;color:var(--muted);line-height:1.65;}
+.finding-body strong{color:var(--text);}
+
+.caveat{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--muted);line-height:1.65;margin-top:14px;}
+.caveat strong{color:#fbbf24;}
+
+.lag-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;padding:8px 12px;background:var(--s2);border-radius:8px;}
+.lag-note strong{color:var(--text);}
+.toggle-btn.tt.active { background: #4a0014; color: #ff8fab; border-color: #ff0050; }
+
+.watermark{text-align:center;font-size:11px;color:rgba(136,146,164,.2);padding:8px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📊</div>
+  <div class="header-title">
+    <h1>LoafyCo — Channel Correlation Analysis</h1>
+    <p>Pearson · Spearman · Lag Correlation · OLS Regression &nbsp;|&nbsp; Jan–May 2026 &nbsp;|&nbsp; n=140 days, n=5 months &nbsp;|&nbsp; (ตัด Hiring Campaigns ออกแล้ว)</p>
+  </div>
+</header>
+
+<main>
+
+<!-- INSIGHT SUMMARY -->
+<div class="insight-grid">
+  <div class="insight-card" style="--card-color:var(--fb)">
+    <div class="insight-rank">🥇 สอดคล้องสูงสุด</div>
+    <div class="insight-channel" style="color:var(--fb)">Facebook Ads</div>
+    <div class="insight-r" style="color:var(--fb)">r = +0.993</div>
+    <div class="sig-badge sig-high">p = 0.001 ✓ Significant</div>
+    <div class="insight-desc">มีความสัมพันธ์เชิงบวกสูงมากกับยอดขายรายเดือน Spearman ρ = 1.000 และพบ <strong style="color:var(--text)">Lag Effect ที่ชัดเจน</strong> — Budget วันนี้สะท้อนยอดขายใน <strong style="color:var(--text)">4–6 วันถัดไป</strong> (Peak: r = +0.358)</div>
+  </div>
+  <div class="insight-card" style="--card-color:var(--kol)">
+    <div class="insight-rank">🥈 สอดคล้องปานกลาง</div>
+    <div class="insight-channel" style="color:var(--kol)">Influencer / KOL</div>
+    <div class="insight-r" style="color:var(--kol)">r = +0.634</div>
+    <div class="sig-badge sig-mid">p = 0.251 &nbsp;⚠ ไม่ Significant</div>
+    <div class="insight-desc">ทิศทางเชิงบวก แต่ <strong style="color:var(--text)">n=5 เดือน ไม่พอสรุปทางสถิติ</strong> ต้องการข้อมูลเพิ่มเติมอีก 7–13 เดือนเพื่อยืนยันผล</div>
+  </div>
+  <div class="insight-card" style="--card-color:var(--ig)">
+    <div class="insight-rank">⚠ ผลสวนทาง</div>
+    <div class="insight-channel" style="color:var(--ig)">Instagram Ads</div>
+    <div class="insight-r" style="color:var(--ig)">r = −0.230</div>
+    <div class="sig-badge sig-low">Daily p = 0.008 ✓ Significant</div>
+    <div class="insight-desc">แสดง <strong style="color:var(--text)">Negative Correlation</strong> — ทุก Lag 0–7 มีนัยสำคัญ (p&lt;0.05) ไม่ได้แปลว่า IG ทำยอดขายลด แต่อาจสะท้อน <strong style="color:var(--text)">Reactive Spending</strong> คือเพิ่ม Budget เมื่อยอดตก</div>
+  </div>
+  <div class="insight-card" style="--card-color:#ff0050">
+    <div class="insight-rank">📱 ช่องทางใหม่</div>
+    <div class="insight-channel" style="color:#ff0050">TikTok Ads</div>
+    <div class="insight-r" style="color:#ff0050">r = −0.091</div>
+    <div class="sig-badge sig-low">Daily p = 0.297 ✗ Not Significant</div>
+    <div class="insight-desc">Daily: ไม่มีนัยสำคัญ (p=0.297)<br>Monthly: r = +0.206 (p=0.739, ns)<br>Lag 0–7: ไม่มีนัยสำคัญทุก lag<br><strong style="color:var(--text)">หยุด มี.ค. แล้วรีบเปิดอีกครั้งช่วงสงกรานต์</strong></div>
+  </div>
+</div>
+
+<!-- CORRELATION TABLE -->
+<div class="panel">
+  <div class="panel-title">Correlation Matrix — ทุก Channel × ทุก Method</div>
+  <div class="panel-sub">Pearson (Linear) · Spearman (Non-parametric) · R² (Variance Explained) — Daily: n=140 · Monthly: n=5</div>
+  <table class="stat-table">
+    <thead>
+      <tr>
+        <th>Channel</th>
+        <th>Level</th>
+        <th>Pearson r</th>
+        <th>Spearman ρ</th>
+        <th>R²</th>
+        <th>p-value</th>
+        <th>ความแรง</th>
+        <th>ทิศทาง</th>
+      </tr>
+    </thead>
+    <tbody id="corr-tbody"></tbody>
+  </table>
+</div>
+
+<!-- LAG + MONTHLY SCATTER -->
+<div class="two-col">
+
+  <div class="panel">
+    <div class="panel-title">Lag Correlation Analysis</div>
+    <div class="panel-sub">Spend วันที่ D → Revenue วันที่ D+N &nbsp;(ผลแบบ Delayed Effect)</div>
+    <div class="tab-bar">
+      <button class="tab active" id="tab-lag-fb" onclick="switchLag('fb')">Facebook</button>
+      <button class="tab"        id="tab-lag-ig" onclick="switchLag('ig')">Instagram</button>
+      <button class="tab toggle-btn tt" id="tab-lag-tt" onclick="switchLag('tt')">TikTok</button>
+    </div>
+    <div class="cw240"><canvas id="lagChart"></canvas></div>
+    <div class="lag-note" id="lag-note"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Scatter Plot — Monthly (n=5)</div>
+    <div class="panel-sub">MKT Spending vs Revenue รายเดือน พร้อม Regression Line</div>
+    <div class="tab-bar">
+      <button class="tab active" id="tab-sc-facebook"   onclick="switchScatter('facebook')">Facebook</button>
+      <button class="tab"        id="tab-sc-instagram"  onclick="switchScatter('instagram')">Instagram</button>
+      <button class="tab"        id="tab-sc-tiktok"     onclick="switchScatter('tiktok')">TikTok</button>
+      <button class="tab"        id="tab-sc-influencer" onclick="switchScatter('influencer')">Influencer</button>
+      <button class="tab"        id="tab-sc-total"      onclick="switchScatter('total')">Total MKT</button>
+    </div>
+    <div class="cw240"><canvas id="scatterChart"></canvas></div>
+  </div>
+
+</div>
+
+<!-- DAILY SCATTER -->
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-title">Daily Scatter — Facebook Ads vs Revenue</div>
+    <div class="panel-sub">n = 133 วัน &nbsp;·&nbsp; Pearson r = +0.252 &nbsp;·&nbsp; p = 0.0034 ✓ Significant</div>
+    <div class="cw260"><canvas id="fbDailyChart"></canvas></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Daily Scatter — Instagram Ads vs Revenue</div>
+    <div class="panel-sub">n = 133 วัน &nbsp;·&nbsp; Pearson r = −0.230 &nbsp;·&nbsp; p = 0.0078 ✓ Significant</div>
+    <div class="cw260"><canvas id="igDailyChart"></canvas></div>
+  </div>
+</div>
+
+<!-- KEY FINDINGS -->
+<div class="panel">
+  <div class="panel-title">💡 Key Statistical Findings & Interpretation</div>
+  <div class="panel-sub">วิเคราะห์โดย Pearson, Spearman Correlation, Lag Analysis และ OLS Regression</div>
+
+  <div class="finding" style="--fc:var(--fb)">
+    <div class="finding-title">1. Facebook Ads มี Lag Effect ชัดเจน — Peak ที่ 6 วัน</div>
+    <div class="finding-body">
+      Lag-0 (same day): r = +0.252 &nbsp;→&nbsp; Lag-5: r = +0.298 &nbsp;→&nbsp; <strong>Lag-6: r = +0.362 (Peak, p &lt; 0.0001)</strong><br>
+      แปลว่า Facebook Ads ที่ยิงวันนี้ส่งผลต่อยอดขายสูงสุดใน <strong>6 วันถัดไป</strong> สอดคล้องกับ Consumer Journey ที่ต้องใช้เวลา Consider ก่อนตัดสินใจมาซื้อจริง
+    </div>
+  </div>
+
+  <div class="finding" style="--fc:var(--fb)">
+    <div class="finding-title">2. Facebook Monthly r = +0.993 — ระวัง Spurious Trend</div>
+    <div class="finding-body">
+      ทั้ง FB Spend และ Revenue ต่างลดลงต่อเนื่องตั้งแต่ ม.ค. → พ.ค. ค่า r สูงอาจมีส่วนจาก <strong>Shared Downtrend</strong> ไม่ใช่ความสัมพันธ์โดยตรง 100% นอกจากนี้ n=5 ยังน้อยเกินไป ควรยืนยันด้วยข้อมูลระยะยาวกว่านี้
+    </div>
+  </div>
+
+  <div class="finding" style="--fc:var(--ig)">
+    <div class="finding-title">3. Instagram มี Negative Lag Correlation ที่ Lag 1–4 วัน</div>
+    <div class="finding-body">
+      Lag-0: r = −0.230 &nbsp;·&nbsp; Lag-2: r = −0.272 (Peak) &nbsp;·&nbsp; Lag-7: r = −0.211 &nbsp;<strong>(ทุก Lag 0–7 มีนัยสำคัญ p &lt; 0.05)</strong><br>
+      <strong>Hypothesis:</strong> ทีมมักเพิ่ม IG Budget เมื่อยอดขายวันก่อนหน้าต่ำ (Reactive Spending) ไม่ใช่ IG ทำยอดขายลด ควร Review ว่า IG Budget ถูกวางแผนแบบ Proactive หรือแค่ใช้เพื่อชดเชยเมื่อยอดตก
+    </div>
+  </div>
+
+  <div class="finding" style="--fc:var(--kol)">
+    <div class="finding-title">4. Influencer มีทิศทางดี แต่ยังสรุปทางสถิติไม่ได้</div>
+    <div class="finding-body">
+      Pearson r = +0.634, Spearman ρ = +0.700 แต่ p = 0.251 (ไม่ Significant) เพราะ n=5 น้อยเกินไป ต้องการข้อมูลอย่างน้อย <strong>12–18 เดือน</strong> เพื่อยืนยัน ทั้งนี้ Influencer ยังมี <strong>Long-tail Effect</strong> คือผลมักเกิดขึ้นหลายสัปดาห์หลังโพสต์
+    </div>
+  </div>
+
+  <div class="caveat">
+    <strong>⚠ Statistical Caveats ที่ควรทราบ</strong><br>
+    • Monthly n=5 ขนาดตัวอย่างเล็กมาก ทุก Correlation อาจเปลี่ยนได้เมื่อมีข้อมูลเพิ่ม<br>
+    • ข้อมูล May 2026 ครอบคลุม 13 วัน (1–13 พ.ค.) ทำให้ยอดขาย พ.ค. ต่ำกว่าเดือนเต็มและ Distort ค่า r<br>
+    • Correlation ≠ Causation — ค่า r สูงไม่ได้แปลว่า Ads เป็นสาเหตุโดยตรง<br>
+    • ปัจจัยภายนอกที่ไม่ได้วิเคราะห์ เช่น Seasonality, Holiday, New Branch Opening ล้วนมีผลต่อ Revenue
+  </div>
+</div>
+
+<p class="watermark">LoafyCo Statistical Analysis · Pearson / Spearman / Lag Correlation / OLS · Jan–May 2026</p>
+</main>
+
+<script>
+// ═══════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════
+const CORR_ROWS = [
+  {ch:'Facebook Ads', level:'Daily (n=140)',   pr:+0.2989, sr:+0.2512, r2:0.0893, p:0.0002},
+  {ch:'Facebook Ads', level:'Monthly (n=5)',   pr:+0.9807, sr:+1.0000, r2:0.9618, p:0.0063},
+  {ch:'Instagram Ads', level:'Daily (n=140)',   pr:-0.2071, sr:-0.1842, r2:0.0429, p:0.0058},
+  {ch:'Instagram Ads', level:'Monthly (n=5)',   pr:-0.4619, sr:-0.6000, r2:0.2133, p:0.4005},
+  {ch:'TikTok Ads', level:'Daily (n=140)',   pr:-0.0580, sr:-0.0539, r2:0.0034, p:0.0533},
+  {ch:'TikTok Ads', level:'Monthly (n=5)',   pr:+0.1208, sr:+0.0000, r2:0.0146, p:0.2044},
+  {ch:'Influencer', level:'Monthly (n=5)',   pr:+0.6658, sr:+0.7000, r2:0.4433, p:0.2929},
+  {ch:'Total MKT', level:'Monthly (n=5)',   pr:+0.6892, sr:+0.7000, r2:0.4750, p:0.2729},
+];;
+
+
+
+
+
+
+
+
+const LAG_FB   = [0.2989, -0.0273, 0.0223, 0.0528, 0.25, 0.3032, 0.3649, 0.1368];
+const LAG_IG   = [-0.2071, -0.2503, -0.2769, -0.2736, -0.2504, -0.2317, -0.2178, -0.2149];
+const LAG_FB_P = [0.0002, 0.0334, 0.028, 0.052, 0.0017, 0.0002, 0.0, 0.0318];
+const LAG_IG_P = [0.0058, 0.0015, 0.0006, 0.0007, 0.0016, 0.0032, 0.005, 0.0056];
+const LAG_TT   = [-0.058, -0.117, -0.1148, -0.1108, -0.1138, -0.0964, -0.0995, -0.0714];
+const LAG_TT_P = [0.0533, 0.0396, 0.0411, 0.0434, 0.0423, 0.0505, 0.0496, 0.0565];
+
+const MONTHLY = {
+  facebook:   {pts:[{"x":38198.74,"y":8176175.0,"m":"Jan"},{"x":36287.35,"y":7284360.0,"m":"Feb"},{"x":36864.42,"y":7651632.5,"m":"Mar"},{"x":33993.55,"y":6605110.0,"m":"Apr"},{"x":20828.27,"y":4476762.5,"m":"May"}], r:'+0.981', p:'0.006'},
+  instagram:   {pts:[{"x":751.62,"y":8176175.0,"m":"Jan"},{"x":204.67,"y":7284360.0,"m":"Feb"},{"x":5743.97,"y":7651632.5,"m":"Mar"},{"x":9182.08,"y":6605110.0,"m":"Apr"},{"x":5800.38,"y":4476762.5,"m":"May"}], r:'-0.462', p:'0.400'},
+  tiktok:   {pts:[{"x":6195.75,"y":8176175.0,"m":"Jan"},{"x":4743.44,"y":7284360.0,"m":"Feb"},{"x":30.12,"y":7651632.5,"m":"Mar"},{"x":11716.09,"y":6605110.0,"m":"Apr"},{"x":1932.22,"y":4476762.5,"m":"May"}], r:'+0.121', p:'0.204'},
+  influencer:   {pts:[{"x":167738.14,"y":8176175.0,"m":"Jan"},{"x":23500.0,"y":7284360.0,"m":"Feb"},{"x":76244.27,"y":7651632.5,"m":"Mar"},{"x":99450.0,"y":6605110.0,"m":"Apr"},{"x":15000.0,"y":4476762.5,"m":"May"}], r:'+0.666', p:'0.293'},
+  total:   {pts:[{"x":212884.25,"y":8176175.0,"m":"Jan"},{"x":64735.46,"y":7284360.0,"m":"Feb"},{"x":118882.78,"y":7651632.5,"m":"Mar"},{"x":154341.72,"y":6605110.0,"m":"Apr"},{"x":43560.87,"y":4476762.5,"m":"May"}], r:'+0.689', p:'0.273'},
+};;
+
+const DAILY_FB = [{"x":903.24,"y":275765.0},{"x":933.38,"y":219675.0},{"x":897.24,"y":322007.5},{"x":1126.64,"y":328925.0},{"x":1323.97,"y":229637.5},{"x":1236.27,"y":218565.0},{"x":1297.39,"y":225295.0},{"x":1163.63,"y":238295.0},{"x":1240.56,"y":246575.0},{"x":1081.27,"y":301860.0},{"x":1542.53,"y":293620.0},{"x":1370.52,"y":228705.0},{"x":1413.03,"y":211295.0},{"x":1212.32,"y":232810.0},{"x":1191.83,"y":247625.0},{"x":1145.48,"y":253355.0},{"x":1135.68,"y":326940.0},{"x":1619.78,"y":316555.0},{"x":1397.22,"y":216915.0},{"x":1369.98,"y":213100.0},{"x":1213.26,"y":215197.5},{"x":1170.73,"y":237822.5},{"x":1159.78,"y":257792.5},{"x":1051.58,"y":339925.0},{"x":1448.09,"y":335812.5},{"x":1417.22,"y":254847.5},{"x":1260.73,"y":257900.0},{"x":1397.44,"y":237115.0},{"x":1121.27,"y":278010.0},{"x":1304.83,"y":272652.5},{"x":1051.88,"y":341580.0},{"x":1495.13,"y":338542.5},{"x":1335.67,"y":240890.0},{"x":1391.66,"y":245630.0},{"x":1314.21,"y":239060.0},{"x":1206.53,"y":245480.0},{"x":1398.7,"y":301930.0},{"x":945.73,"y":342675.0},{"x":1617.53,"y":336725.0},{"x":1330.96,"y":217600.0},{"x":1316.4,"y":233160.0},{"x":1281.72,"y":233787.5},{"x":1131.41,"y":246245.0},{"x":1231.28,"y":236070.0},{"x":1215.83,"y":324705.0},{"x":1579.33,"y":296690.0},{"x":1409.28,"y":164997.5},{"x":1246.33,"y":224385.0},{"x":1222.48,"y":199975.0},{"x":1223.65,"y":208035.0},{"x":1256.95,"y":259520.0},{"x":1177.81,"y":317290.0},{"x":1394.72,"y":344990.0},{"x":1346.77,"y":213210.0},{"x":1210.56,"y":214125.0},{"x":1302.7,"y":214080.0},{"x":1261.6,"y":229680.0},{"x":1343.58,"y":271282.5},{"x":1098.83,"y":343600.0},{"x":1295.12,"y":328602.5},{"x":1124.45,"y":218365.0},{"x":1209.19,"y":293450.0},{"x":1278.56,"y":207910.0},{"x":1201.12,"y":205475.0},{"x":1203.02,"y":244845.0},{"x":1137.39,"y":309290.0},{"x":1210.12,"y":308685.0},{"x":1236.75,"y":203375.0},{"x":1334.86,"y":216340.0},{"x":1341.78,"y":190625.0},{"x":1297.0,"y":198415.0},{"x":1234.26,"y":222235.0},{"x":1386.98,"y":305475.0},{"x":1482.4,"y":301292.5},{"x":1192.67,"y":191380.0},{"x":952.14,"y":195310.0},{"x":952.26,"y":196582.5},{"x":963.62,"y":226145.0},{"x":1003.19,"y":219615.0},{"x":1027.97,"y":306450.0},{"x":1051.53,"y":292000.0},{"x":987.47,"y":184180.0},{"x":1035.8,"y":176960.0},{"x":1149.9,"y":193992.5},{"x":1226.93,"y":188540.0},{"x":1203.63,"y":270150.0},{"x":1210.29,"y":345970.0},{"x":1369.78,"y":368645.0},{"x":1247.4,"y":254400.0},{"x":1316.84,"y":286932.5},{"x":1173.96,"y":284055.0},{"x":968.94,"y":193725.0},{"x":1082.06,"y":194787.5},{"x":1153.53,"y":271642.5},{"x":1224.01,"y":269320.0},{"x":1151.71,"y":211255.0},{"x":1102.45,"y":143910.0},{"x":1010.48,"y":169430.0},{"x":1133.12,"y":175060.0},{"x":1250.42,"y":202882.5},{"x":1136.01,"y":283322.5},{"x":1236.43,"y":270942.5},{"x":1191.34,"y":280752.5},{"x":1349.88,"y":271455.0},{"x":1192.36,"y":265990.0},{"x":1073.53,"y":185155.0},{"x":1064.15,"y":198970.0},{"x":1188.52,"y":257680.0},{"x":1167.3,"y":267510.0},{"x":1088.05,"y":160400.0},{"x":1185.93,"y":178315.0},{"x":1012.01,"y":179370.0},{"x":1017.56,"y":185017.5},{"x":1027.39,"y":207710.0},{"x":1243.59,"y":267500.0},{"x":1265.91,"y":276580.0},{"x":1146.4,"y":175210.0},{"x":1020.93,"y":181985.0},{"x":1089.53,"y":184800.0},{"x":1046.05,"y":210377.5},{"x":1152.25,"y":280572.5},{"x":1006.73,"y":274440.0},{"x":1084.8,"y":282180.0},{"x":976.08,"y":227260.0},{"x":1126.37,"y":175530.0},{"x":1189.64,"y":173762.5},{"x":1099.72,"y":180915.0},{"x":1062.33,"y":198270.0},{"x":1015.69,"y":275655.0},{"x":1046.14,"y":303790.0},{"x":1090.97,"y":172180.0},{"x":1028.09,"y":180930.0},{"x":987.97,"y":199787.5},{"x":1054.02,"y":193822.5},{"x":1059.69,"y":213430.0},{"x":1100.11,"y":314260.0},{"x":1157.65,"y":316585.0},{"x":1092.17,"y":188730.0},{"x":1195.23,"y":188260.0},{"x":302.63,"y":136402.5}];;
+
+const DAILY_IG = [{"x":1.79,"y":275765.0},{"x":2.56,"y":219675.0},{"x":12.42,"y":322007.5},{"x":62.37,"y":328925.0},{"x":22.63,"y":229637.5},{"x":25.1,"y":218565.0},{"x":26.76,"y":225295.0},{"x":38.49,"y":238295.0},{"x":31.59,"y":246575.0},{"x":28.07,"y":301860.0},{"x":26.56,"y":293620.0},{"x":28.99,"y":228705.0},{"x":23.3,"y":211295.0},{"x":20.51,"y":232810.0},{"x":14.77,"y":247625.0},{"x":19.49,"y":253355.0},{"x":16.32,"y":326940.0},{"x":25.57,"y":316555.0},{"x":14.1,"y":216915.0},{"x":19.64,"y":213100.0},{"x":17.2,"y":215197.5},{"x":28.43,"y":237822.5},{"x":43.53,"y":257792.5},{"x":36.9,"y":339925.0},{"x":31.78,"y":335812.5},{"x":34.46,"y":254847.5},{"x":32.04,"y":257900.0},{"x":21.98,"y":237115.0},{"x":15.79,"y":278010.0},{"x":17.39,"y":272652.5},{"x":11.06,"y":341580.0},{"x":19.22,"y":338542.5},{"x":20.24,"y":240890.0},{"x":15.59,"y":245630.0},{"x":9.66,"y":239060.0},{"x":3.59,"y":245480.0},{"x":8.04,"y":301930.0},{"x":3.38,"y":342675.0},{"x":1.04,"y":336725.0},{"x":2.0,"y":217600.0},{"x":1.78,"y":233160.0},{"x":4.53,"y":233787.5},{"x":6.33,"y":246245.0},{"x":5.02,"y":236070.0},{"x":6.54,"y":324705.0},{"x":6.63,"y":296690.0},{"x":3.16,"y":164997.5},{"x":2.29,"y":224385.0},{"x":3.51,"y":199975.0},{"x":5.69,"y":208035.0},{"x":10.6,"y":259520.0},{"x":5.3,"y":317290.0},{"x":3.68,"y":344990.0},{"x":7.25,"y":213210.0},{"x":10.91,"y":214125.0},{"x":13.39,"y":214080.0},{"x":14.06,"y":229680.0},{"x":7.1,"y":271282.5},{"x":4.14,"y":343600.0},{"x":7.75,"y":328602.5},{"x":8.24,"y":218365.0},{"x":1.57,"y":293450.0},{"x":1.19,"y":207910.0},{"x":0.95,"y":205475.0},{"x":0.3,"y":244845.0},{"x":0.22,"y":309290.0},{"x":0.32,"y":308685.0},{"x":0.3,"y":203375.0},{"x":0.35,"y":216340.0},{"x":0.78,"y":190625.0},{"x":0.26,"y":198415.0},{"x":0.25,"y":222235.0},{"x":0.43,"y":305475.0},{"x":0.3,"y":301292.5},{"x":77.23,"y":191380.0},{"x":296.91,"y":195310.0},{"x":380.33,"y":196582.5},{"x":368.37,"y":226145.0},{"x":375.97,"y":219615.0},{"x":380.75,"y":306450.0},{"x":390.5,"y":292000.0},{"x":365.32,"y":184180.0},{"x":360.42,"y":176960.0},{"x":382.01,"y":193992.5},{"x":379.84,"y":188540.0},{"x":377.72,"y":270150.0},{"x":372.46,"y":345970.0},{"x":409.33,"y":368645.0},{"x":382.7,"y":254400.0},{"x":420.9,"y":286932.5},{"x":391.68,"y":284055.0},{"x":352.93,"y":193725.0},{"x":366.83,"y":194787.5},{"x":379.17,"y":271642.5},{"x":420.37,"y":269320.0},{"x":387.54,"y":211255.0},{"x":230.39,"y":143910.0},{"x":208.54,"y":169430.0},{"x":207.17,"y":175060.0},{"x":209.88,"y":202882.5},{"x":202.13,"y":283322.5},{"x":252.98,"y":270942.5},{"x":234.22,"y":280752.5},{"x":208.59,"y":271455.0},{"x":169.99,"y":265990.0},{"x":179.65,"y":185155.0},{"x":263.62,"y":198970.0},{"x":295.65,"y":257680.0},{"x":317.87,"y":267510.0},{"x":310.02,"y":160400.0},{"x":421.81,"y":178315.0},{"x":332.55,"y":179370.0},{"x":323.18,"y":185017.5},{"x":317.39,"y":207710.0},{"x":401.11,"y":267500.0},{"x":393.77,"y":276580.0},{"x":352.63,"y":175210.0},{"x":348.12,"y":181985.0},{"x":323.42,"y":184800.0},{"x":378.88,"y":210377.5},{"x":353.77,"y":280572.5},{"x":339.41,"y":274440.0},{"x":426.85,"y":282180.0},{"x":383.31,"y":227260.0},{"x":292.08,"y":175530.0},{"x":281.96,"y":173762.5},{"x":272.1,"y":180915.0},{"x":258.09,"y":198270.0},{"x":258.85,"y":275655.0},{"x":287.53,"y":303790.0},{"x":278.43,"y":172180.0},{"x":260.76,"y":180930.0},{"x":265.03,"y":199787.5},{"x":263.66,"y":193822.5},{"x":301.16,"y":213430.0},{"x":318.38,"y":314260.0},{"x":335.47,"y":316585.0},{"x":284.69,"y":188730.0},{"x":284.06,"y":188260.0},{"x":54.79,"y":136402.5}];;
+
+// ═══════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════
+const CH_COLORS = {'Facebook Ads':'#1877f2','Instagram Ads':'#e1306c','TikTok Ads':'#ff0050','Influencer':'#a78bfa','Total MKT':'#f4a742'};
+const SCATTER_COLORS = {facebook:'#1877f2',instagram:'#e1306c',tiktok:'#ff0050',influencer:'#a78bfa',total:'#f4a742'};
+const SCATTER_LABELS = {facebook:'Facebook Ads',instagram:'Instagram Ads',tiktok:'TikTok Ads',influencer:'Influencer',total:'Total MKT'};
+
+function sigColor(p){ return p<0.05?'#34d399':p<0.1?'#fbbf24':'#f87171'; }
+function sigText(p) { return p<0.05?'✓ Significant (p<0.05)':p<0.1?'~ Marginal (p<0.1)':'✗ Not Sig'; }
+function strength(r){
+  const a=Math.abs(r);
+  return a>=0.8?'สูงมาก (Very Strong)':a>=0.5?'ปานกลาง (Moderate)':a>=0.2?'ต่ำ-ปานกลาง (Weak-Mod)':'ต่ำ (Weak)';
+}
+
+// OLS regression for two arrays of {x,y}
+function ols(pts){
+  const n=pts.length, xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+  const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  const num=xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+  const den=xs.reduce((s,x)=>s+(x-mx)**2,0);
+  const b=den?num/den:0, a=my-b*mx;
+  const xMin=Math.min(...xs), xMax=Math.max(...xs);
+  return {slope:b, intercept:a, line:[{x:xMin*0.92,y:a+b*xMin*0.92},{x:xMax*1.05,y:a+b*xMax*1.05}]};
+}
+
+// ═══════════════════════════════════════
+//  CORR TABLE
+// ═══════════════════════════════════════
+(function buildTable(){
+  const tbody = document.getElementById('corr-tbody');
+  tbody.innerHTML = CORR_ROWS.map(d=>{
+    const pos=d.pr>=0; const pct=Math.abs(d.pr)*100;
+    const fillLeft = pos?'50%':`${50-Math.abs(d.pr)*50}%`;
+    const fillW    = `${Math.abs(d.pr)*50}%`;
+    const clr      = CH_COLORS[d.ch]||'#f4a742';
+    return `
+    <tr>
+      <td style="color:${clr}">${d.ch}</td>
+      <td style="color:var(--muted);font-size:11px">${d.level}</td>
+      <td>
+        <div class="r-bar-wrap">
+          <div class="r-bar-track">
+            <div class="r-bar-fill" style="left:${fillLeft};width:${fillW};background:${pos?'#34d399':'#f87171'}"></div>
+          </div>
+          <span style="font-weight:800;font-size:13px;color:${pos?'#34d399':'#f87171'}">${pos?'+':''}${d.pr.toFixed(4)}</span>
+        </div>
+      </td>
+      <td style="color:var(--muted)">${d.sr>=0?'+':''}${d.sr.toFixed(4)}</td>
+      <td style="color:var(--accent);font-weight:700">${(d.r2*100).toFixed(1)}%</td>
+      <td>
+        <span style="color:${sigColor(d.p)};font-weight:700;font-size:11px">${sigText(d.p)}</span>
+        <div style="color:var(--muted);font-size:10px">p = ${d.p}</div>
+      </td>
+      <td style="color:var(--muted);font-size:11px">${strength(d.pr)}</td>
+      <td><span style="color:${pos?'#34d399':'#f87171'};font-weight:700">${pos?'↑ Positive':'↓ Negative'}</span></td>
+    </tr>`;
+  }).join('');
+})();
+
+// ═══════════════════════════════════════
+//  LAG CHART
+// ═══════════════════════════════════════
+let lagChartInst = null;
+let currentLagCh = 'fb';
+
+function buildLagChart(){
+  const isFB  = currentLagCh === 'fb';
+  const isTT  = currentLagCh === 'tt';
+  const rData = isFB ? LAG_FB : (isTT ? LAG_TT : LAG_IG);
+  const pData = isFB ? LAG_FB_P : (isTT ? LAG_TT_P : LAG_IG_P);
+  const color = isFB ? '#1877f2' : (isTT ? '#ff0050' : '#e1306c');
+
+  const ctx = document.getElementById('lagChart').getContext('2d');
+  if(lagChartInst) lagChartInst.destroy();
+
+  const bgColors = rData.map((r,i) => {
+    const isSig = pData[i]<0.05;
+    if(isTT) return isSig ? 'rgba(255,0,80,0.85)' : 'rgba(255,0,80,0.25)';
+    if(!isSig) return r>=0?'rgba(24,119,242,0.25)':'rgba(248,113,113,0.25)';
+    return r>=0?'rgba(24,119,242,0.85)':'rgba(248,113,113,0.85)';
+  });
+  const borderColors = rData.map(r=>isTT?'#ff0050':(r>=0?color:'#f87171'));
+
+  lagChartInst = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:['Lag 0','Lag 1','Lag 2','Lag 3','Lag 4','Lag 5','Lag 6','Lag 7'],
+      datasets:[{
+        label:'Pearson r',
+        data: rData,
+        backgroundColor: bgColors,
+        borderColor: borderColors,
+        borderWidth: 1.5,
+        borderRadius: 5,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+          titleColor:'#e8eaf0',bodyColor:'#8892a4',padding:10,
+          callbacks:{
+            label: ctx => {
+              const i=ctx.dataIndex;
+              const sig = pData[i]<0.05?'✓ Significant':'Not Significant';
+              return [`r = ${rData[i].toFixed(4)}`, `p = ${pData[i].toFixed(4)}  ${sig}`];
+            }
+          }
+        },
+        annotation: {annotations:{}}
+      },
+      scales:{
+        x:{grid:{color:'rgba(46,51,77,0.4)'},ticks:{color:'#8892a4',font:{size:11}}},
+        y:{
+          min:-0.40, max:0.50,
+          grid:{color:'rgba(46,51,77,0.4)'},
+          ticks:{color:'#8892a4',font:{size:11},
+            callback: v => v===0?'0':v.toFixed(2)
+          }
+        }
+      }
+    }
+  });
+
+  // note
+  const peakIdx = rData.reduce((bi,v,i)=>Math.abs(v)>Math.abs(rData[bi])?i:bi,0);
+  const sigStr = rData.map((r,i)=>pData[i]<0.05?`Lag-${i}`:'').filter(Boolean).join(', ')||'ไม่มี';
+  document.getElementById('lag-note').innerHTML = isFB
+    ? `<strong>📌 Peak ที่ Lag-${peakIdx} (r = ${rData[peakIdx].toFixed(3)})</strong> — FB Spend วันนี้มีผลต่อยอดขายสูงสุดหลัง ${peakIdx} วัน &nbsp;|&nbsp; Significant lags: <strong>${sigStr}</strong> &nbsp;|&nbsp; แถบทึบ = p&lt;0.05`
+    : isTT
+    ? `<strong>📌 Peak ที่ Lag-${peakIdx} (r = ${rData[peakIdx].toFixed(3)})</strong> — TikTok ไม่มี Lag ใดที่มีนัยสำคัญ (ทุก p&gt;0.05) &nbsp;|&nbsp; Significant lags: <strong>${sigStr}</strong>`
+    : `<strong>📌 Negative Peak ที่ Lag-${peakIdx} (r = ${rData[peakIdx].toFixed(3)})</strong> — IG Spend สูงขึ้นเมื่อยอดขายลดลง (Reactive) &nbsp;|&nbsp; Significant lags: <strong>${sigStr}</strong>`;
+}
+
+function switchLag(ch){
+  currentLagCh=ch;
+  document.getElementById('tab-lag-fb').classList.toggle('active',ch==='fb');
+  document.getElementById('tab-lag-ig').classList.toggle('active',ch==='ig');
+  document.getElementById('tab-lag-tt').classList.toggle('active',ch==='tt');
+  if(ch==='tt') document.getElementById('tab-lag-tt').classList.add('tt');
+  buildLagChart();
+}
+
+// ═══════════════════════════════════════
+//  MONTHLY SCATTER
+// ═══════════════════════════════════════
+let scatterInst = null;
+let currentSC = 'facebook';
+
+function buildScatterChart(){
+  const ctx = document.getElementById('scatterChart').getContext('2d');
+  if(scatterInst) scatterInst.destroy();
+
+  const d = MONTHLY[currentSC];
+  const color = SCATTER_COLORS[currentSC];
+  const reg = ols(d.pts);
+  const MONTH_COLORS = ['#f59e0b','#3b82f6','#10b981','#ec4899','#a78bfa'];
+
+  scatterInst = new Chart(ctx, {
+    type:'scatter',
+    data:{datasets:[
+      {
+        label:'Monthly Data',
+        data: d.pts,
+        backgroundColor: d.pts.map((_,i)=>MONTH_COLORS[i]+'cc'),
+        borderColor:     d.pts.map((_,i)=>MONTH_COLORS[i]),
+        pointRadius: 10,
+        pointHoverRadius: 13,
+        borderWidth: 2,
+      },
+      {
+        label:'Regression Line',
+        data: reg.line,
+        type:'line',
+        borderColor: color+'80',
+        borderWidth: 2,
+        borderDash: [6,4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+          titleColor:'#e8eaf0',bodyColor:'#8892a4',padding:10,
+          filter: item => item.datasetIndex===0,
+          callbacks:{
+            title: ()=>'',
+            label: ctx=>{
+              const p=ctx.raw;
+              if(!p.m) return null;
+              return [`เดือน: ${p.m}`,`Spend: ฿${Math.round(p.x).toLocaleString()}`,`Revenue: ฿${Math.round(p.y).toLocaleString()}`];
+            }
+          }
+        },
+        title:{
+          display:true,
+          text:`${SCATTER_LABELS[currentSC]}  |  r = ${d.r}  |  p = ${d.p}  |  n = 5`,
+          color:'#8892a4', font:{size:11}, padding:{bottom:6}
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(46,51,77,0.4)'},
+          ticks:{color:'#8892a4',font:{size:10},callback:v=>'฿'+(v/1000).toFixed(0)+'K'},
+          title:{display:true,text:'MKT Spend (฿)',color:'#8892a4',font:{size:10}}
+        },
+        y:{
+          grid:{color:'rgba(46,51,77,0.4)'},
+          ticks:{color:'#34d399',font:{size:10},callback:v=>'฿'+(v/1e6).toFixed(1)+'M'},
+          title:{display:true,text:'Monthly Revenue (฿)',color:'#34d399',font:{size:10}}
+        }
+      }
+    }
+  });
+}
+
+function switchScatter(ch){
+  currentSC=ch;
+  ['facebook','instagram','tiktok','influencer','total'].forEach(k=>{
+    const el=document.getElementById('tab-sc-'+k);
+    if(el) el.classList.toggle('active',k===ch);
+  });
+  buildScatterChart();
+}
+
+// ═══════════════════════════════════════
+//  DAILY SCATTER
+// ═══════════════════════════════════════
+function buildDailyScatter(canvasId, pts, color, xAxisLabel){
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const reg = ols(pts);
+
+  new Chart(ctx, {
+    type:'scatter',
+    data:{datasets:[
+      {
+        label:'Daily',
+        data: pts,
+        backgroundColor: color+'44',
+        borderColor: color+'88',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 1,
+      },
+      {
+        label:'Trend Line',
+        data: reg.line,
+        type:'line',
+        borderColor: color+'cc',
+        borderWidth: 2.5,
+        borderDash: [7,4],
+        pointRadius: 0,
+        fill: false,
+        tension: 0,
+      }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+          bodyColor:'#8892a4',padding:9,
+          filter: item=>item.datasetIndex===0,
+          callbacks:{
+            title:()=>'',
+            label: ctx=>[`Spend: ฿${Math.round(ctx.raw.x).toLocaleString()}`,`Revenue: ฿${Math.round(ctx.raw.y).toLocaleString()}`]
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(46,51,77,0.35)'},
+          ticks:{color:'#8892a4',font:{size:10}},
+          title:{display:true,text:xAxisLabel,color:'#8892a4',font:{size:10}}
+        },
+        y:{
+          grid:{color:'rgba(46,51,77,0.35)'},
+          ticks:{color:'#34d399',font:{size:10},callback:v=>'฿'+(v/1000).toFixed(0)+'K'},
+          title:{display:true,text:'Daily Revenue (฿)',color:'#34d399',font:{size:10}}
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+buildLagChart();
+buildScatterChart();
+buildDailyScatter('fbDailyChart', DAILY_FB, '#1877f2', 'Facebook Daily Spend (฿)');
+buildDailyScatter('igDailyChart', DAILY_IG, '#e1306c', 'Instagram Daily Spend (฿)');
+</script>
+</body>
+</html>
