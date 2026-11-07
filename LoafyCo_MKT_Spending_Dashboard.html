@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoafyCo — MKT Spending Dashboard 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e334d;
+    --accent:#f4a742; --fb:#1877f2; --ig:#e1306c; --kol:#a78bfa; --tiktok:#ff0050;
+    --revenue:#34d399; --text:#e8eaf0; --muted:#8892a4; --danger:#f87171;
+    --line:#00B900; --grab-ads:#00c853;
+    --lasalle:#f59e0b; --ctw:#3b82f6; --circle:#10b981; --thong:#ec4899; --ladprao:#8b5cf6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;}
+
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .header-left{display:flex;align-items:center;gap:14px;}
+  .logo{width:42px;height:42px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .header-title h1{font-size:18px;font-weight:700;letter-spacing:-.3px;}
+  .header-title p{font-size:12px;color:var(--muted);margin-top:2px;}
+
+  .view-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;gap:4px;}
+  .view-btn{padding:7px 20px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);background:transparent;transition:all .2s;}
+  .view-btn.active{background:var(--accent);color:#000;}
+
+  main{padding:24px 32px;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:22px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:14px;}
+  @media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(4,1fr);}}
+  @media(max-width:720px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent-color,var(--accent));}
+  .kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;}
+  .kpi-value{font-size:26px;font-weight:800;margin-top:6px;letter-spacing:-1px;}
+  .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+  .kpi-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;margin-top:6px;}
+  .badge-up{background:rgba(52,211,153,.15);color:#34d399;}
+  .badge-down{background:rgba(248,113,113,.15);color:#f87171;}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;}
+  .panel-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .panel-title{font-size:14px;font-weight:700;}
+  .panel-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
+  .legend-dot{width:10px;height:10px;border-radius:50%;}
+  .legend-line{width:18px;height:3px;border-radius:2px;}
+
+  .chart-wrap{position:relative;height:280px;}
+  .chart-scroll{overflow-x:auto;}
+  .chart-scroll-inner{height:280px;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+  .three-col{display:grid;grid-template-columns:auto 1fr 1fr;gap:20px;}
+  @media(max-width:1000px){.three-col{grid-template-columns:1fr 1fr;}}
+  @media(max-width:680px){.three-col{grid-template-columns:1fr;}}
+
+  .data-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .data-table th{text-align:right;padding:8px 10px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);font-weight:600;}
+  .data-table th:first-child{text-align:left;}
+  .data-table td{padding:10px 10px;border-bottom:1px solid rgba(46,51,77,.4);text-align:right;}
+  .data-table td:first-child{text-align:left;font-weight:600;}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:rgba(255,255,255,.025);}
+  .ratio-bar-wrap{display:flex;align-items:center;gap:6px;justify-content:flex-end;}
+  .ratio-bar{height:5px;border-radius:3px;background:linear-gradient(90deg,var(--accent),#f97316);}
+
+  .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .month-btn{padding:5px 14px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .month-btn.active,.month-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(244,167,66,.08);}
+  .filter-label{font-size:11px;color:var(--muted);}
+
+  /* Donut */
+  .donut-row{display:flex;align-items:center;gap:20px;}
+  .donut-wrap{position:relative;width:150px;height:150px;flex-shrink:0;}
+  .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;}
+  .donut-center-val{font-size:20px;font-weight:800;}
+  .donut-center-lbl{font-size:10px;color:var(--muted);}
+  .donut-legend{flex:1;display:flex;flex-direction:column;gap:9px;}
+  .donut-legend-item{display:flex;align-items:center;justify-content:space-between;font-size:12px;}
+  .donut-legend-left{display:flex;align-items:center;gap:8px;}
+  .donut-legend-bar{width:11px;height:11px;border-radius:3px;}
+  .donut-legend-val{font-weight:700;}
+
+  /* Branch badges */
+  .branch-bar-row{display:flex;flex-direction:column;gap:10px;}
+  .branch-row{display:flex;align-items:center;gap:10px;font-size:12px;}
+  .branch-name{width:140px;color:var(--muted);flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .branch-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .branch-fill{height:100%;border-radius:4px;transition:width .4s;}
+  .branch-val{width:70px;text-align:right;font-weight:700;font-size:11px;}
+
+  .watermark{text-align:center;font-size:11px;color:rgba(136,146,164,.25);padding:8px 0 2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🍞</div>
+    <div class="header-title">
+      <h1>LoafyCo — MKT Spending Dashboard</h1>
+      <p>ข้อมูล : มกราคม – 3 สิงหาคม 2569 &nbsp;|&nbsp; ทุกสาขา &nbsp;|&nbsp; <span style="color:#f87171;font-size:11px">⚠ ตัด Hiring Campaigns ออกแล้ว (฿14,674) &nbsp;|&nbsp; ส.ค. = ข้อมูลบางส่วน (3 วัน)</span></p>
+    </div>
+  </div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="btn-monthly" onclick="setView('monthly')">Monthly</button>
+    <button class="view-btn"        id="btn-daily"   onclick="setView('daily')">Daily</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPI -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Month filter (daily) -->
+  <div id="filter-bar-wrap" style="display:none;">
+    <div class="filter-bar" id="filter-bar">
+      <span class="filter-label">เลือกเดือน :</span>
+      <button class="month-btn active" onclick="setMonth('all',this)">ทั้งหมด</button>
+      <button class="month-btn" onclick="setMonth('2026-01',this)">ม.ค.</button>
+      <button class="month-btn" onclick="setMonth('2026-02',this)">ก.พ.</button>
+      <button class="month-btn" onclick="setMonth('2026-03',this)">มี.ค.</button>
+      <button class="month-btn" onclick="setMonth('2026-04',this)">เม.ย.</button>
+      <button class="month-btn" onclick="setMonth('2026-05',this)">พ.ค.</button>
+      <button class="month-btn" onclick="setMonth('2026-06',this)">มิ.ย.</button>
+      <button class="month-btn" onclick="setMonth('2026-07',this)">ก.ค.</button>
+      <button class="month-btn" onclick="setMonth('2026-08',this)">ส.ค. <span style="font-size:9px;opacity:.6">3วัน</span></button>
+    </div>
+  </div>
+
+  <!-- MAIN CHART -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title" id="main-chart-title">MKT Spending vs ยอดขาย (รายเดือน)</div>
+        <div class="panel-sub">Stacked Bar = Spending  |  Line = Revenue (แกนขวา)</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--fb)"></div>Facebook Ads</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--ig)"></div>IG Ads</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tiktok)"></div>TikTok Ads</div>
+        <div class="legend-item" id="kol-leg"><div class="legend-dot" style="background:var(--kol)"></div>Influencer</div>
+        <div class="legend-item" id="line-leg"><div class="legend-dot" style="background:var(--line)"></div>Line OA</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--revenue)"></div>Revenue</div>
+      </div>
+    </div>
+    <div class="chart-scroll" id="main-scroll">
+      <div id="main-chart-inner" style="height:280px;">
+        <canvas id="mainChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Donut + Table -->
+  <div class="two-col">
+
+    <!-- LEFT: Donut + Branch bars -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Donut -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">สัดส่วน MKT Spending</div>
+            <div class="panel-sub" id="donut-period">สะสม ม.ค.–ส.ค. 2569</div>
+          </div>
+        </div>
+        <div class="donut-row">
+          <div class="donut-wrap">
+            <canvas id="donutChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-total">฿0</div>
+              <div class="donut-center-lbl">Total MKT</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="donut-legend"></div>
+        </div>
+      </div>
+
+      <!-- Branch Revenue chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Revenue by สาขา</div>
+            <div class="panel-sub" id="branch-period">สะสม ม.ค.–ส.ค. 2569</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="branch-filter-chips"></div>
+        <div style="position:relative;height:200px;"><canvas id="branchChart"></canvas></div>
+        <div id="branch-bars" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Monthly table -->
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">สรุปรายเดือน</div>
+          <div class="panel-sub">MKT Spending · Revenue · % Ratio</div>
+        </div>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>เดือน</th>
+            <th>Facebook</th>
+            <th>Instagram</th>
+            <th>TikTok</th>
+            <th>Influencer</th>
+            <th>Line OA</th>
+            <th>Grab Ads</th>
+            <th>MKT Fee</th>
+            <th>Revenue</th>
+            <th>MKT%</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: Sales Channel Breakdown -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Revenue by ช่องทางการขาย</div>
+        <div class="panel-sub" id="channel-period">สะสม ม.ค.–ส.ค. 2569</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <!-- Granularity toggle -->
+        <div class="view-toggle" id="ch-gran-toggle">
+          <button class="view-btn" data-gran="day" onclick="setChGran('day')">รายวัน</button>
+          <button class="view-btn" data-gran="week" onclick="setChGran('week')">รายสัปดาห์</button>
+          <button class="view-btn active" data-gran="month" onclick="setChGran('month')">รายเดือน</button>
+        </div>
+        <!-- Channel filter chips -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="ch-filter-chips"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;">
+      <div><canvas id="channelChart" height="260"></canvas></div>
+      <div id="channel-bars" style="display:flex;flex-direction:column;gap:10px;padding-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Grab Ads Performance -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🟢 Grab Ads Performance · รายสาขา</div>
+        <div class="panel-sub" id="grab-period">สะสม ม.ค.–ส.ค. 2569</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:12px;align-items:center;font-size:11px;margin-right:8px;">
+          <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#00c853;vertical-align:middle;margin-right:4px;"></span>Ad Spend (เส้น)</span>
+          <span><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:#34d399;vertical-align:middle;margin-right:4px;opacity:.7"></span>Ad Sales (bars)</span>
+        </div>
+        <!-- Branch filter chips -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="grab-filter-chips"></div>
+      </div>
+    </div>
+    <!-- KPI strip -->
+    <div id="grab-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;"></div>
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;">
+      <div><canvas id="grabChart" height="260"></canvas></div>
+      <div id="grab-branch-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Grab Cost Structure -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🟢 Grab Cost Structure · ต้นทุนการขายผ่าน Grab</div>
+        <div class="panel-sub">GMV breakdown: Net Payout + ค่าคอมมิชชัน + Marketing Success Fee + Ads Spend · ก.พ.–ก.ค. 2569</div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>Net Payout</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f4a742"></div>Channel Comm</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Order Comm</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f87171"></div>Mkt Success Fee</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>Ads Spend</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:24px;align-items:start;">
+      <div style="position:relative;height:300px;"><canvas id="costStackChart"></canvas></div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:12px;">Effective Fee % รายสาขา</div>
+        <div style="position:relative;height:280px;"><canvas id="effFeeChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 6: Grab Cost Breakdown Table by Branch -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">ต้นทุน Grab รายสาขา · รายเดือน</div>
+        <div class="panel-sub">GMV · Commission · Mkt Success Fee · Ads · Net Payout · Effective Fee%</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;" id="cost-month-chips"></div>
+    </div>
+    <div id="cost-table-wrap"></div>
+  </div>
+
+  <!-- ROW 7: Grab Daily Cost (Aug 4–10) -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🟢 ต้นทุน Grab รายวัน · สิงหาคม 2569</div>
+        <div class="panel-sub">Channel Comm + Order Comm + Mkt Success Fee + Ads · 4–10 ส.ค. (dedup Aug 4 จาก Transaction file ใหม่)</div>
+      </div>
+    </div>
+    <div id="grab-daily-wrap"></div>
+  </div>
+
+  <p class="watermark">LoafyCo Marketing Intelligence · Meta Ads + KOL DB + Line OA + Grab Ads + POS Feb–Aug 2026 · All Branches · Updated 2026-08-11</p>
+</main>
+
+<script>
+// ═══════════════ DATA ═══════════════
+const DAILY = [{"date": "2026-01-01", "revenue": 275765, "facebook": 1033.23, "instagram": 47.5, "tiktok": 200.28, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1281.01, "mkt_ratio": 0.4645, "grab_orders": 4, "grab_ad_sales": 990.0}, {"date": "2026-01-02", "revenue": 219675, "facebook": 1075.87, "instagram": 38.64, "tiktok": 197.9, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1312.41, "mkt_ratio": 0.5974, "grab_orders": 1, "grab_ad_sales": 290.0}, {"date": "2026-01-03", "revenue": 322008, "facebook": 1039.23, "instagram": 49.44, "tiktok": 197.57, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1286.24, "mkt_ratio": 0.3994, "grab_orders": 8, "grab_ad_sales": 2340.0}, {"date": "2026-01-04", "revenue": 328925, "facebook": 1313.16, "instagram": 113.11, "tiktok": 201.36, "influencer_cost": 12260.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 13887.63, "mkt_ratio": 4.2221, "grab_orders": 10, "grab_ad_sales": 2725.0}, {"date": "2026-01-05", "revenue": 229638, "facebook": 1449.58, "instagram": 96.05, "tiktok": 199.97, "influencer_cost": 14550.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 16295.6, "mkt_ratio": 7.0962, "grab_orders": 8, "grab_ad_sales": 2610.0}, {"date": "2026-01-06", "revenue": 218565, "facebook": 1381.9, "instagram": 88.05, "tiktok": 202.26, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1672.21, "mkt_ratio": 0.7651, "grab_orders": 5, "grab_ad_sales": 1720.0}, {"date": "2026-01-07", "revenue": 225295, "facebook": 1414.37, "instagram": 104.54, "tiktok": 204.92, "influencer_cost": 14550.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 16273.83, "mkt_ratio": 7.2233, "grab_orders": 5, "grab_ad_sales": 1655.0}, {"date": "2026-01-08", "revenue": 238295, "facebook": 1272.02, "instagram": 111.99, "tiktok": 198.11, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1582.12, "mkt_ratio": 0.6639, "grab_orders": 10, "grab_ad_sales": 3230.0}, {"date": "2026-01-09", "revenue": 246575, "facebook": 1363.67, "instagram": 105.5, "tiktok": 198.09, "influencer_cost": 55938.14, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 57605.4, "mkt_ratio": 23.3622, "grab_orders": 11, "grab_ad_sales": 2965.0}, {"date": "2026-01-10", "revenue": 301860, "facebook": 1182.84, "instagram": 103.66, "tiktok": 195.29, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1481.79, "mkt_ratio": 0.4909, "grab_orders": 4, "grab_ad_sales": 1285.0}, {"date": "2026-01-11", "revenue": 293620, "facebook": 1682.47, "instagram": 113.09, "tiktok": 200.8, "influencer_cost": 873.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2869.36, "mkt_ratio": 0.9772, "grab_orders": 3, "grab_ad_sales": 610.0}, {"date": "2026-01-12", "revenue": 228705, "facebook": 1504.94, "instagram": 99.59, "tiktok": 200.95, "influencer_cost": 16490.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 18295.48, "mkt_ratio": 7.9996, "grab_orders": 10, "grab_ad_sales": 3490.0}, {"date": "2026-01-13", "revenue": 211295, "facebook": 1525.11, "instagram": 115.6, "tiktok": 200.33, "influencer_cost": 1746.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 3587.04, "mkt_ratio": 1.6976, "grab_orders": 15, "grab_ad_sales": 5385.0}, {"date": "2026-01-14", "revenue": 232810, "facebook": 1312.75, "instagram": 111.9, "tiktok": 202.07, "influencer_cost": 970.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2596.72, "mkt_ratio": 1.1154, "grab_orders": 3, "grab_ad_sales": 1260.0}, {"date": "2026-01-15", "revenue": 247625, "facebook": 1290.94, "instagram": 109.37, "tiktok": 201.48, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1601.79, "mkt_ratio": 0.6469, "grab_orders": 10, "grab_ad_sales": 2580.0}, {"date": "2026-01-16", "revenue": 253355, "facebook": 1275.5, "instagram": 83.79, "tiktok": 199.0, "influencer_cost": 873.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2431.29, "mkt_ratio": 0.9596, "grab_orders": 10, "grab_ad_sales": 4120.0}, {"date": "2026-01-17", "revenue": 326940, "facebook": 1274.8, "instagram": 61.09, "tiktok": 195.37, "influencer_cost": 873.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2404.26, "mkt_ratio": 0.7354, "grab_orders": 6, "grab_ad_sales": 2440.0}, {"date": "2026-01-18", "revenue": 316555, "facebook": 1819.91, "instagram": 115.55, "tiktok": 203.08, "influencer_cost": 10670.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 12808.54, "mkt_ratio": 4.0462, "grab_orders": 6, "grab_ad_sales": 2395.0}, {"date": "2026-01-19", "revenue": 216915, "facebook": 1677.5, "instagram": 105.41, "tiktok": 200.38, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1983.29, "mkt_ratio": 0.9143, "grab_orders": 6, "grab_ad_sales": 1775.0}, {"date": "2026-01-20", "revenue": 213100, "facebook": 1668.55, "instagram": 80.5, "tiktok": 200.94, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1949.99, "mkt_ratio": 0.9151, "grab_orders": 7, "grab_ad_sales": 1785.0}, {"date": "2026-01-21", "revenue": 215198, "facebook": 1483.72, "instagram": 96.53, "tiktok": 200.67, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1780.92, "mkt_ratio": 0.8276, "grab_orders": 7, "grab_ad_sales": 2170.0}, {"date": "2026-01-22", "revenue": 237822, "facebook": 1411.9, "instagram": 131.56, "tiktok": 207.09, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1750.55, "mkt_ratio": 0.7361, "grab_orders": 3, "grab_ad_sales": 975.0}, {"date": "2026-01-23", "revenue": 257792, "facebook": 1371.9, "instagram": 177.0, "tiktok": 201.94, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1750.84, "mkt_ratio": 0.6792, "grab_orders": 5, "grab_ad_sales": 1555.0}, {"date": "2026-01-24", "revenue": 339925, "facebook": 1106.67, "instagram": 167.48, "tiktok": 185.9, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1460.05, "mkt_ratio": 0.4295, "grab_orders": 9, "grab_ad_sales": 2520.0}, {"date": "2026-01-25", "revenue": 335812, "facebook": 1594.36, "instagram": 200.01, "tiktok": 201.2, "influencer_cost": 873.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2868.57, "mkt_ratio": 0.8542, "grab_orders": 11, "grab_ad_sales": 3535.0}, {"date": "2026-01-26", "revenue": 254848, "facebook": 1607.77, "instagram": 198.55, "tiktok": 201.87, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2008.19, "mkt_ratio": 0.788, "grab_orders": 9, "grab_ad_sales": 2505.0}, {"date": "2026-01-27", "revenue": 257900, "facebook": 1429.07, "instagram": 155.39, "tiktok": 200.7, "influencer_cost": 873.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2658.16, "mkt_ratio": 1.0307, "grab_orders": 6, "grab_ad_sales": 2865.0}, {"date": "2026-01-28", "revenue": 237115, "facebook": 1584.95, "instagram": 134.57, "tiktok": 201.33, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1920.85, "mkt_ratio": 0.8101, "grab_orders": 9, "grab_ad_sales": 3000.0}, {"date": "2026-01-29", "revenue": 278010, "facebook": 1289.14, "instagram": 131.43, "tiktok": 201.31, "influencer_cost": 12000.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 13621.88, "mkt_ratio": 4.8998, "grab_orders": 7, "grab_ad_sales": 3945.0}, {"date": "2026-01-30", "revenue": 272652, "facebook": 1494.19, "instagram": 106.63, "tiktok": 199.52, "influencer_cost": 22000.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 23800.34, "mkt_ratio": 8.7292, "grab_orders": 10, "grab_ad_sales": 3425.0}, {"date": "2026-01-31", "revenue": 341580, "facebook": 1229.52, "instagram": 110.38, "tiktok": 194.07, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1533.97, "mkt_ratio": 0.4491, "grab_orders": 10, "grab_ad_sales": 2520.0}, {"date": "2026-02-01", "revenue": 338542, "facebook": 1709.58, "instagram": 155.08, "tiktok": 204.31, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 2068.97, "mkt_ratio": 0.6111, "grab_orders": 7, "grab_ad_sales": 2005.0}, {"date": "2026-02-02", "revenue": 240890, "facebook": 1584.61, "instagram": 101.27, "tiktok": 202.91, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1888.79, "mkt_ratio": 0.7841, "grab_orders": 11, "grab_ad_sales": 4340.0}, {"date": "2026-02-03", "revenue": 245630, "facebook": 1586.14, "instagram": 112.83, "tiktok": 198.85, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1897.82, "mkt_ratio": 0.7726, "grab_orders": 3, "grab_ad_sales": 615.0}, {"date": "2026-02-04", "revenue": 239060, "facebook": 1526.58, "instagram": 81.77, "tiktok": 202.33, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 0.0, "total_mkt": 1810.68, "mkt_ratio": 0.7574, "grab_orders": 7, "grab_ad_sales": 2575.0}, {"date": "2026-02-05", "revenue": 245480, "facebook": 1392.41, "instagram": 86.13, "tiktok": 198.48, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 310.2, "total_mkt": 1987.22, "mkt_ratio": 0.8095, "grab_orders": 3, "grab_ad_sales": 765.0}, {"date": "2026-02-06", "revenue": 301930, "facebook": 1648.56, "instagram": 63.83, "tiktok": 198.21, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 283.14, "total_mkt": 2193.74, "mkt_ratio": 0.7266, "grab_orders": 16, "grab_ad_sales": 5995.0}, {"date": "2026-02-07", "revenue": 342675, "facebook": 1142.85, "instagram": 75.64, "tiktok": 170.76, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 312.28, "total_mkt": 1701.53, "mkt_ratio": 0.4965, "grab_orders": 9, "grab_ad_sales": 3590.0}, {"date": "2026-02-08", "revenue": 336725, "facebook": 1869.37, "instagram": 69.97, "tiktok": 203.11, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 301.88, "total_mkt": 2444.33, "mkt_ratio": 0.7259, "grab_orders": 9, "grab_ad_sales": 2515.0}, {"date": "2026-02-09", "revenue": 217600, "facebook": 1540.68, "instagram": 91.67, "tiktok": 200.7, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 310.2, "total_mkt": 2143.25, "mkt_ratio": 0.9849, "grab_orders": 6, "grab_ad_sales": 1735.0}, {"date": "2026-02-10", "revenue": 233160, "facebook": 1562.41, "instagram": 72.53, "tiktok": 201.85, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 306.04, "total_mkt": 2142.83, "mkt_ratio": 0.919, "grab_orders": 5, "grab_ad_sales": 1665.0}, {"date": "2026-02-11", "revenue": 233788, "facebook": 1508.61, "instagram": 98.41, "tiktok": 202.06, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 301.87, "total_mkt": 2110.95, "mkt_ratio": 0.9029, "grab_orders": 8, "grab_ad_sales": 2560.0}, {"date": "2026-02-12", "revenue": 246245, "facebook": 1324.75, "instagram": 88.85, "tiktok": 202.79, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 302.96, "total_mkt": 1919.35, "mkt_ratio": 0.7794, "grab_orders": 7, "grab_ad_sales": 2170.0}, {"date": "2026-02-13", "revenue": 236070, "facebook": 1449.77, "instagram": 63.76, "tiktok": 195.51, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 303.86, "total_mkt": 2012.9, "mkt_ratio": 0.8527, "grab_orders": 12, "grab_ad_sales": 5380.0}, {"date": "2026-02-14", "revenue": 324705, "facebook": 1390.97, "instagram": 119.37, "tiktok": 193.98, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 302.51, "total_mkt": 2006.83, "mkt_ratio": 0.618, "grab_orders": 12, "grab_ad_sales": 3870.0}, {"date": "2026-02-15", "revenue": 296690, "facebook": 1799.15, "instagram": 129.71, "tiktok": 201.05, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 301.03, "total_mkt": 2430.94, "mkt_ratio": 0.8194, "grab_orders": 15, "grab_ad_sales": 6435.0}, {"date": "2026-02-16", "revenue": 164998, "facebook": 1620.12, "instagram": 96.07, "tiktok": 204.44, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 304.49, "total_mkt": 2225.12, "mkt_ratio": 1.3486, "grab_orders": 3, "grab_ad_sales": 1245.0}, {"date": "2026-02-17", "revenue": 224385, "facebook": 1456.45, "instagram": 83.32, "tiktok": 204.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 306.66, "total_mkt": 2050.43, "mkt_ratio": 0.9138, "grab_orders": 9, "grab_ad_sales": 3795.0}, {"date": "2026-02-18", "revenue": 199975, "facebook": 1398.29, "instagram": 111.13, "tiktok": 204.1, "influencer_cost": 10500.0, "line_cost": 0.0, "grab_ads": 302.85, "total_mkt": 12516.37, "mkt_ratio": 6.259, "grab_orders": 11, "grab_ad_sales": 3350.0}, {"date": "2026-02-19", "revenue": 208035, "facebook": 1414.44, "instagram": 104.85, "tiktok": 196.5, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 304.11, "total_mkt": 2019.9, "mkt_ratio": 0.9709, "grab_orders": 20, "grab_ad_sales": 8890.0}, {"date": "2026-02-20", "revenue": 259520, "facebook": 1476.68, "instagram": 94.43, "tiktok": 195.11, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 303.74, "total_mkt": 2069.96, "mkt_ratio": 0.7976, "grab_orders": 21, "grab_ad_sales": 7500.0}, {"date": "2026-02-21", "revenue": 317290, "facebook": 1367.14, "instagram": 99.86, "tiktok": 194.8, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 359.24, "total_mkt": 2021.04, "mkt_ratio": 0.637, "grab_orders": 12, "grab_ad_sales": 4105.0}, {"date": "2026-02-22", "revenue": 344990, "facebook": 1580.57, "instagram": 134.42, "tiktok": 201.25, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 455.9, "total_mkt": 2372.14, "mkt_ratio": 0.6876, "grab_orders": 30, "grab_ad_sales": 10855.0}, {"date": "2026-02-23", "revenue": 213210, "facebook": 1496.2, "instagram": 175.71, "tiktok": 200.64, "influencer_cost": 12610.0, "line_cost": 0.0, "grab_ads": 457.42, "total_mkt": 14939.97, "mkt_ratio": 7.0072, "grab_orders": 18, "grab_ad_sales": 7490.0}, {"date": "2026-02-24", "revenue": 214125, "facebook": 1234.61, "instagram": 54.4, "tiktok": 165.7, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 450.79, "total_mkt": 1905.5, "mkt_ratio": 0.8899, "grab_orders": 10, "grab_ad_sales": 3445.0}, {"date": "2026-02-25", "revenue": 214080, "facebook": 1302.7, "instagram": 13.39, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 455.67, "total_mkt": 1771.76, "mkt_ratio": 0.8276, "grab_orders": 22, "grab_ad_sales": 10165.0}, {"date": "2026-02-26", "revenue": 229680, "facebook": 1261.6, "instagram": 14.06, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 450.89, "total_mkt": 1726.55, "mkt_ratio": 0.7517, "grab_orders": 15, "grab_ad_sales": 5095.0}, {"date": "2026-02-27", "revenue": 271282, "facebook": 1343.58, "instagram": 7.1, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 455.87, "total_mkt": 1806.55, "mkt_ratio": 0.6659, "grab_orders": 24, "grab_ad_sales": 11880.0}, {"date": "2026-02-28", "revenue": 343600, "facebook": 1098.83, "instagram": 4.14, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 454.15, "total_mkt": 1557.12, "mkt_ratio": 0.4532, "grab_orders": 16, "grab_ad_sales": 4245.0}, {"date": "2026-03-01", "revenue": 328602, "facebook": 1295.12, "instagram": 7.75, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 455.25, "total_mkt": 1758.12, "mkt_ratio": 0.535, "grab_orders": 18, "grab_ad_sales": 6280.0}, {"date": "2026-03-02", "revenue": 218365, "facebook": 1124.45, "instagram": 8.24, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 456.65, "total_mkt": 1589.34, "mkt_ratio": 0.7278, "grab_orders": 21, "grab_ad_sales": 7940.0}, {"date": "2026-03-03", "revenue": 293450, "facebook": 1209.19, "instagram": 1.57, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 453.38, "total_mkt": 1664.14, "mkt_ratio": 0.5671, "grab_orders": 18, "grab_ad_sales": 7545.0}, {"date": "2026-03-04", "revenue": 207910, "facebook": 1278.56, "instagram": 1.19, "tiktok": 0.0, "influencer_cost": 970.0, "line_cost": 0.0, "grab_ads": 455.61, "total_mkt": 2705.36, "mkt_ratio": 1.3012, "grab_orders": 17, "grab_ad_sales": 9775.0}, {"date": "2026-03-05", "revenue": 205475, "facebook": 1201.12, "instagram": 0.95, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 453.22, "total_mkt": 1655.29, "mkt_ratio": 0.8056, "grab_orders": 10, "grab_ad_sales": 3295.0}, {"date": "2026-03-06", "revenue": 244845, "facebook": 1203.02, "instagram": 0.3, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 455.28, "total_mkt": 1658.6, "mkt_ratio": 0.6774, "grab_orders": 16, "grab_ad_sales": 4340.0}, {"date": "2026-03-07", "revenue": 309290, "facebook": 1137.39, "instagram": 0.22, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 459.45, "total_mkt": 1597.06, "mkt_ratio": 0.5164, "grab_orders": 17, "grab_ad_sales": 4820.0}, {"date": "2026-03-08", "revenue": 308685, "facebook": 1210.12, "instagram": 0.32, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 453.2, "total_mkt": 1663.64, "mkt_ratio": 0.5389, "grab_orders": 18, "grab_ad_sales": 5680.0}, {"date": "2026-03-09", "revenue": 203375, "facebook": 1236.75, "instagram": 0.3, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 453.22, "total_mkt": 1690.27, "mkt_ratio": 0.8311, "grab_orders": 18, "grab_ad_sales": 5775.0}, {"date": "2026-03-10", "revenue": 216340, "facebook": 1334.86, "instagram": 0.35, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 459.44, "total_mkt": 1794.65, "mkt_ratio": 0.8296, "grab_orders": 8, "grab_ad_sales": 2020.0}, {"date": "2026-03-11", "revenue": 190625, "facebook": 1341.78, "instagram": 0.78, "tiktok": 0.0, "influencer_cost": 12148.54, "line_cost": 0.0, "grab_ads": 453.21, "total_mkt": 13944.31, "mkt_ratio": 7.315, "grab_orders": 23, "grab_ad_sales": 8760.0}, {"date": "2026-03-12", "revenue": 198415, "facebook": 1297.0, "instagram": 0.26, "tiktok": 0.0, "influencer_cost": 1164.0, "line_cost": 0.0, "grab_ads": 604.98, "total_mkt": 3066.24, "mkt_ratio": 1.5454, "grab_orders": 20, "grab_ad_sales": 6570.0}, {"date": "2026-03-13", "revenue": 222235, "facebook": 1234.26, "instagram": 0.25, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 609.12, "total_mkt": 1843.63, "mkt_ratio": 0.8296, "grab_orders": 25, "grab_ad_sales": 10495.0}, {"date": "2026-03-14", "revenue": 305475, "facebook": 1386.98, "instagram": 0.43, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 683.32, "total_mkt": 2070.73, "mkt_ratio": 0.6779, "grab_orders": 23, "grab_ad_sales": 7455.0}, {"date": "2026-03-15", "revenue": 301292, "facebook": 1482.4, "instagram": 0.3, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 763.27, "total_mkt": 2245.97, "mkt_ratio": 0.7454, "grab_orders": 18, "grab_ad_sales": 6565.0}, {"date": "2026-03-16", "revenue": 191380, "facebook": 1192.67, "instagram": 77.23, "tiktok": 0.0, "influencer_cost": 14550.0, "line_cost": 0.0, "grab_ads": 681.89, "total_mkt": 16501.79, "mkt_ratio": 8.6225, "grab_orders": 17, "grab_ad_sales": 6750.0}, {"date": "2026-03-17", "revenue": 195310, "facebook": 952.14, "instagram": 296.91, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 765.06, "total_mkt": 2014.11, "mkt_ratio": 1.0312, "grab_orders": 19, "grab_ad_sales": 6704.0}, {"date": "2026-03-18", "revenue": 196582, "facebook": 952.26, "instagram": 380.33, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 750.52, "total_mkt": 2083.11, "mkt_ratio": 1.0597, "grab_orders": 13, "grab_ad_sales": 5530.0}, {"date": "2026-03-19", "revenue": 226145, "facebook": 963.62, "instagram": 368.37, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 759.1, "total_mkt": 2091.09, "mkt_ratio": 0.9247, "grab_orders": 25, "grab_ad_sales": 10265.0}, {"date": "2026-03-20", "revenue": 219615, "facebook": 1003.19, "instagram": 375.97, "tiktok": 0.0, "influencer_cost": 13114.4, "line_cost": 0.0, "grab_ads": 765.38, "total_mkt": 15258.94, "mkt_ratio": 6.948, "grab_orders": 15, "grab_ad_sales": 6550.0}, {"date": "2026-03-21", "revenue": 306450, "facebook": 1027.97, "instagram": 380.75, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 765.54, "total_mkt": 2174.26, "mkt_ratio": 0.7095, "grab_orders": 14, "grab_ad_sales": 4695.0}, {"date": "2026-03-22", "revenue": 292000, "facebook": 1051.53, "instagram": 390.5, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 769.99, "total_mkt": 2212.02, "mkt_ratio": 0.7575, "grab_orders": 20, "grab_ad_sales": 7280.0}, {"date": "2026-03-23", "revenue": 184180, "facebook": 987.47, "instagram": 365.32, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 766.06, "total_mkt": 2118.85, "mkt_ratio": 1.1504, "grab_orders": 27, "grab_ad_sales": 7450.0}, {"date": "2026-03-24", "revenue": 176960, "facebook": 1035.8, "instagram": 360.42, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 761.53, "total_mkt": 2157.75, "mkt_ratio": 1.2193, "grab_orders": 13, "grab_ad_sales": 4600.0}, {"date": "2026-03-25", "revenue": 193992, "facebook": 1149.9, "instagram": 382.01, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 755.03, "total_mkt": 2286.94, "mkt_ratio": 1.1789, "grab_orders": 26, "grab_ad_sales": 10100.0}, {"date": "2026-03-26", "revenue": 188540, "facebook": 1226.93, "instagram": 379.84, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 765.37, "total_mkt": 2372.14, "mkt_ratio": 1.2582, "grab_orders": 31, "grab_ad_sales": 14330.0}, {"date": "2026-03-27", "revenue": 270150, "facebook": 1203.63, "instagram": 377.72, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 759.29, "total_mkt": 2340.64, "mkt_ratio": 0.8664, "grab_orders": 30, "grab_ad_sales": 10695.0}, {"date": "2026-03-28", "revenue": 345970, "facebook": 1210.29, "instagram": 372.46, "tiktok": 0.0, "influencer_cost": 20370.0, "line_cost": 0.0, "grab_ads": 768.14, "total_mkt": 22720.89, "mkt_ratio": 6.5673, "grab_orders": 22, "grab_ad_sales": 7505.0}, {"date": "2026-03-29", "revenue": 368645, "facebook": 1369.78, "instagram": 409.33, "tiktok": 0.0, "influencer_cost": 11640.0, "line_cost": 0.0, "grab_ads": 760.39, "total_mkt": 14179.5, "mkt_ratio": 3.8464, "grab_orders": 13, "grab_ad_sales": 4620.0}, {"date": "2026-03-30", "revenue": 254400, "facebook": 1247.4, "instagram": 382.7, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 769.47, "total_mkt": 2399.57, "mkt_ratio": 0.9432, "grab_orders": 18, "grab_ad_sales": 5440.0}, {"date": "2026-03-31", "revenue": 286932, "facebook": 1316.84, "instagram": 420.9, "tiktok": 30.12, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 772.55, "total_mkt": 2540.41, "mkt_ratio": 0.8854, "grab_orders": 17, "grab_ad_sales": 15250.0}, {"date": "2026-04-01", "revenue": 284055, "facebook": 1173.96, "instagram": 391.68, "tiktok": 383.69, "influencer_cost": 9950.0, "line_cost": 0.0, "grab_ads": 755.84, "total_mkt": 12655.17, "mkt_ratio": 4.4552, "grab_orders": 24, "grab_ad_sales": 6640.0}, {"date": "2026-04-02", "revenue": 193725, "facebook": 968.94, "instagram": 352.93, "tiktok": 486.23, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 755.51, "total_mkt": 2563.61, "mkt_ratio": 1.3233, "grab_orders": 15, "grab_ad_sales": 5385.0}, {"date": "2026-04-03", "revenue": 194788, "facebook": 1082.06, "instagram": 366.83, "tiktok": 345.99, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 764.77, "total_mkt": 2559.65, "mkt_ratio": 1.3141, "grab_orders": 13, "grab_ad_sales": 4645.0}, {"date": "2026-04-04", "revenue": 271642, "facebook": 1153.53, "instagram": 379.17, "tiktok": 348.27, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 766.94, "total_mkt": 2647.91, "mkt_ratio": 0.9748, "grab_orders": 21, "grab_ad_sales": 7830.0}, {"date": "2026-04-05", "revenue": 269320, "facebook": 1224.01, "instagram": 420.37, "tiktok": 354.43, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 687.27, "total_mkt": 2686.08, "mkt_ratio": 0.9974, "grab_orders": 20, "grab_ad_sales": 6115.0}, {"date": "2026-04-06", "revenue": 211255, "facebook": 1151.71, "instagram": 387.54, "tiktok": 424.96, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 717.29, "total_mkt": 2681.5, "mkt_ratio": 1.2693, "grab_orders": 10, "grab_ad_sales": 3565.0}, {"date": "2026-04-07", "revenue": 143910, "facebook": 1102.45, "instagram": 230.39, "tiktok": 360.32, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 756.03, "total_mkt": 2449.19, "mkt_ratio": 1.7019, "grab_orders": 19, "grab_ad_sales": 6035.0}, {"date": "2026-04-08", "revenue": 169430, "facebook": 1010.48, "instagram": 208.54, "tiktok": 420.96, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 753.93, "total_mkt": 2393.91, "mkt_ratio": 1.4129, "grab_orders": 20, "grab_ad_sales": 10725.0}, {"date": "2026-04-09", "revenue": 175060, "facebook": 1133.12, "instagram": 207.17, "tiktok": 344.51, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 762.58, "total_mkt": 2447.38, "mkt_ratio": 1.398, "grab_orders": 28, "grab_ad_sales": 12955.0}, {"date": "2026-04-10", "revenue": 202882, "facebook": 1250.42, "instagram": 209.88, "tiktok": 432.81, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 751.98, "total_mkt": 2645.09, "mkt_ratio": 1.3038, "grab_orders": 26, "grab_ad_sales": 12920.0}, {"date": "2026-04-11", "revenue": 283322, "facebook": 1136.01, "instagram": 202.13, "tiktok": 429.22, "influencer_cost": 10000.0, "line_cost": 0.0, "grab_ads": 762.49, "total_mkt": 12529.85, "mkt_ratio": 4.4225, "grab_orders": 18, "grab_ad_sales": 5690.0}, {"date": "2026-04-12", "revenue": 270942, "facebook": 1236.43, "instagram": 252.98, "tiktok": 442.2, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 762.5, "total_mkt": 2694.11, "mkt_ratio": 0.9943, "grab_orders": 7, "grab_ad_sales": 2497.0}, {"date": "2026-04-13", "revenue": 280752, "facebook": 1191.34, "instagram": 234.22, "tiktok": 400.27, "influencer_cost": 15000.0, "line_cost": 0.0, "grab_ads": 760.66, "total_mkt": 17586.49, "mkt_ratio": 6.2641, "grab_orders": 13, "grab_ad_sales": 3665.0}, {"date": "2026-04-14", "revenue": 271455, "facebook": 1349.88, "instagram": 208.59, "tiktok": 420.71, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 757.39, "total_mkt": 2736.57, "mkt_ratio": 1.0081, "grab_orders": 15, "grab_ad_sales": 4370.0}, {"date": "2026-04-15", "revenue": 265990, "facebook": 1192.36, "instagram": 169.99, "tiktok": 388.13, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 745.51, "total_mkt": 2495.99, "mkt_ratio": 0.9384, "grab_orders": 11, "grab_ad_sales": 4350.0}, {"date": "2026-04-16", "revenue": 185155, "facebook": 1073.53, "instagram": 179.65, "tiktok": 394.36, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 773.02, "total_mkt": 2420.56, "mkt_ratio": 1.3073, "grab_orders": 18, "grab_ad_sales": 5050.0}, {"date": "2026-04-17", "revenue": 198970, "facebook": 1064.15, "instagram": 263.62, "tiktok": 379.54, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 767.1, "total_mkt": 2474.41, "mkt_ratio": 1.2436, "grab_orders": 17, "grab_ad_sales": 5180.0}, {"date": "2026-04-18", "revenue": 257680, "facebook": 1188.52, "instagram": 295.65, "tiktok": 374.79, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 771.33, "total_mkt": 2630.29, "mkt_ratio": 1.0208, "grab_orders": 26, "grab_ad_sales": 6520.0}, {"date": "2026-04-19", "revenue": 267510, "facebook": 1167.3, "instagram": 317.87, "tiktok": 410.93, "influencer_cost": 9500.0, "line_cost": 0.0, "grab_ads": 762.49, "total_mkt": 12158.59, "mkt_ratio": 4.5451, "grab_orders": 12, "grab_ad_sales": 3170.0}, {"date": "2026-04-20", "revenue": 160400, "facebook": 1088.05, "instagram": 310.02, "tiktok": 362.44, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 760.4, "total_mkt": 2520.91, "mkt_ratio": 1.5716, "grab_orders": 14, "grab_ad_sales": 6665.0}, {"date": "2026-04-21", "revenue": 178315, "facebook": 1185.93, "instagram": 421.81, "tiktok": 393.47, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 764.47, "total_mkt": 2765.68, "mkt_ratio": 1.551, "grab_orders": 26, "grab_ad_sales": 9190.0}, {"date": "2026-04-22", "revenue": 179370, "facebook": 1012.01, "instagram": 332.55, "tiktok": 452.8, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 751.23, "total_mkt": 2548.59, "mkt_ratio": 1.4209, "grab_orders": 19, "grab_ad_sales": 6590.0}, {"date": "2026-04-23", "revenue": 185018, "facebook": 1017.56, "instagram": 323.18, "tiktok": 424.07, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 755.78, "total_mkt": 2520.59, "mkt_ratio": 1.3623, "grab_orders": 65, "grab_ad_sales": 26945.0}, {"date": "2026-04-24", "revenue": 207710, "facebook": 1027.39, "instagram": 317.39, "tiktok": 377.25, "influencer_cost": 18000.0, "line_cost": 0.0, "grab_ads": 751.92, "total_mkt": 20473.95, "mkt_ratio": 9.857, "grab_orders": 24, "grab_ad_sales": 9875.0}, {"date": "2026-04-25", "revenue": 267500, "facebook": 1243.59, "instagram": 401.11, "tiktok": 371.48, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 758.48, "total_mkt": 2774.66, "mkt_ratio": 1.0373, "grab_orders": 19, "grab_ad_sales": 6130.0}, {"date": "2026-04-26", "revenue": 276580, "facebook": 1265.91, "instagram": 393.77, "tiktok": 430.78, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 754.04, "total_mkt": 2844.5, "mkt_ratio": 1.0285, "grab_orders": 16, "grab_ad_sales": 4260.0}, {"date": "2026-04-27", "revenue": 175210, "facebook": 1146.4, "instagram": 352.63, "tiktok": 359.18, "influencer_cost": 25000.0, "line_cost": 0.0, "grab_ads": 757.91, "total_mkt": 27616.12, "mkt_ratio": 15.7617, "grab_orders": 28, "grab_ad_sales": 7945.0}, {"date": "2026-04-28", "revenue": 181985, "facebook": 1020.93, "instagram": 348.12, "tiktok": 312.37, "influencer_cost": 12000.0, "line_cost": 0.0, "grab_ads": 744.95, "total_mkt": 14426.37, "mkt_ratio": 7.9272, "grab_orders": 12, "grab_ad_sales": 4208.0}, {"date": "2026-04-29", "revenue": 184800, "facebook": 1089.53, "instagram": 323.42, "tiktok": 327.97, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 755.59, "total_mkt": 2496.51, "mkt_ratio": 1.3509, "grab_orders": 17, "grab_ad_sales": 4705.0}, {"date": "2026-04-30", "revenue": 210378, "facebook": 1046.05, "instagram": 378.88, "tiktok": 361.96, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 759.89, "total_mkt": 2546.78, "mkt_ratio": 1.2106, "grab_orders": 18, "grab_ad_sales": 8380.0}, {"date": "2026-05-01", "revenue": 280572, "facebook": 1152.25, "instagram": 353.77, "tiktok": 427.07, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 755.69, "total_mkt": 2688.78, "mkt_ratio": 0.9583, "grab_orders": 18, "grab_ad_sales": 4515.0}, {"date": "2026-05-02", "revenue": 274440, "facebook": 1006.73, "instagram": 339.41, "tiktok": 421.27, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 758.51, "total_mkt": 2525.92, "mkt_ratio": 0.9204, "grab_orders": 9, "grab_ad_sales": 2760.0}, {"date": "2026-05-03", "revenue": 282180, "facebook": 1084.8, "instagram": 426.85, "tiktok": 419.11, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 758.01, "total_mkt": 2688.77, "mkt_ratio": 0.9529, "grab_orders": 25, "grab_ad_sales": 8715.0}, {"date": "2026-05-04", "revenue": 227260, "facebook": 976.08, "instagram": 383.31, "tiktok": 369.3, "influencer_cost": 15000.0, "line_cost": 0.0, "grab_ads": 758.25, "total_mkt": 17486.94, "mkt_ratio": 7.6947, "grab_orders": 21, "grab_ad_sales": 7845.0}, {"date": "2026-05-05", "revenue": 175530, "facebook": 1126.37, "instagram": 292.08, "tiktok": 295.47, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 717.39, "total_mkt": 2431.31, "mkt_ratio": 1.3851, "grab_orders": 12, "grab_ad_sales": 4355.0}, {"date": "2026-05-06", "revenue": 173762, "facebook": 1189.64, "instagram": 281.96, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 756.05, "total_mkt": 2227.65, "mkt_ratio": 1.282, "grab_orders": 21, "grab_ad_sales": 7535.0}, {"date": "2026-05-07", "revenue": 180915, "facebook": 1099.72, "instagram": 272.1, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 864.79, "total_mkt": 2236.61, "mkt_ratio": 1.2363, "grab_orders": 25, "grab_ad_sales": 7700.0}, {"date": "2026-05-08", "revenue": 198270, "facebook": 1062.33, "instagram": 258.09, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 863.8, "total_mkt": 2184.22, "mkt_ratio": 1.1016, "grab_orders": 13, "grab_ad_sales": 3460.0}, {"date": "2026-05-09", "revenue": 275655, "facebook": 1015.69, "instagram": 258.85, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 858.39, "total_mkt": 2132.93, "mkt_ratio": 0.7738, "grab_orders": 15, "grab_ad_sales": 5365.0}, {"date": "2026-05-10", "revenue": 303790, "facebook": 1046.14, "instagram": 287.53, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 862.6, "total_mkt": 2196.27, "mkt_ratio": 0.723, "grab_orders": 27, "grab_ad_sales": 10040.0}, {"date": "2026-05-11", "revenue": 172180, "facebook": 1090.97, "instagram": 278.43, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 866.79, "total_mkt": 2236.19, "mkt_ratio": 1.2988, "grab_orders": 14, "grab_ad_sales": 4905.0}, {"date": "2026-05-12", "revenue": 180930, "facebook": 1028.09, "instagram": 260.76, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 850.2, "total_mkt": 2139.05, "mkt_ratio": 1.1823, "grab_orders": 30, "grab_ad_sales": 8395.0}, {"date": "2026-05-13", "revenue": 199788, "facebook": 987.97, "instagram": 265.03, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 860.44, "total_mkt": 2113.44, "mkt_ratio": 1.0578, "grab_orders": 28, "grab_ad_sales": 10140.0}, {"date": "2026-05-14", "revenue": 193822, "facebook": 1054.02, "instagram": 263.66, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 862.58, "total_mkt": 2180.26, "mkt_ratio": 1.1249, "grab_orders": 30, "grab_ad_sales": 11470.0}, {"date": "2026-05-15", "revenue": 213430, "facebook": 1059.69, "instagram": 301.16, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 865.62, "total_mkt": 2226.47, "mkt_ratio": 1.0432, "grab_orders": 17, "grab_ad_sales": 6179.0}, {"date": "2026-05-16", "revenue": 314260, "facebook": 1100.11, "instagram": 318.38, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 859.51, "total_mkt": 2278.0, "mkt_ratio": 0.7249, "grab_orders": 24, "grab_ad_sales": 6435.0}, {"date": "2026-05-17", "revenue": 316585, "facebook": 1157.65, "instagram": 335.47, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 863.34, "total_mkt": 2356.46, "mkt_ratio": 0.7443, "grab_orders": 16, "grab_ad_sales": 4940.0}, {"date": "2026-05-18", "revenue": 188380, "facebook": 1092.17, "instagram": 284.69, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 881.88, "total_mkt": 2258.74, "mkt_ratio": 1.199, "grab_orders": 39, "grab_ad_sales": 16230.0}, {"date": "2026-05-19", "revenue": 188260, "facebook": 1195.23, "instagram": 284.06, "tiktok": 0.0, "influencer_cost": 3500.0, "line_cost": 0.0, "grab_ads": 862.65, "total_mkt": 5841.94, "mkt_ratio": 3.1031, "grab_orders": 34, "grab_ad_sales": 11940.0}, {"date": "2026-05-20", "revenue": 199475, "facebook": 1051.63, "instagram": 290.47, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 856.18, "total_mkt": 2198.28, "mkt_ratio": 1.102, "grab_orders": 17, "grab_ad_sales": 7010.0}, {"date": "2026-05-21", "revenue": 206580, "facebook": 956.27, "instagram": 348.39, "tiktok": 0.0, "influencer_cost": 7000.0, "line_cost": 0.0, "grab_ads": 863.3, "total_mkt": 9167.96, "mkt_ratio": 4.438, "grab_orders": 29, "grab_ad_sales": 9200.0}, {"date": "2026-05-22", "revenue": 227055, "facebook": 891.72, "instagram": 307.23, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 858.71, "total_mkt": 2057.66, "mkt_ratio": 0.9062, "grab_orders": 26, "grab_ad_sales": 10910.0}, {"date": "2026-05-23", "revenue": 322960, "facebook": 826.56, "instagram": 243.55, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 846.68, "total_mkt": 1916.79, "mkt_ratio": 0.5935, "grab_orders": 11, "grab_ad_sales": 3745.0}, {"date": "2026-05-24", "revenue": 334230, "facebook": 1009.12, "instagram": 329.68, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 858.93, "total_mkt": 2197.73, "mkt_ratio": 0.6576, "grab_orders": 34, "grab_ad_sales": 10430.0}, {"date": "2026-05-25", "revenue": 174290, "facebook": 1002.28, "instagram": 278.37, "tiktok": 0.0, "influencer_cost": 10000.0, "line_cost": 0.0, "grab_ads": 863.98, "total_mkt": 12144.63, "mkt_ratio": 6.9681, "grab_orders": 35, "grab_ad_sales": 13315.0}, {"date": "2026-05-26", "revenue": 195078, "facebook": 986.11, "instagram": 286.2, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 856.77, "total_mkt": 2129.08, "mkt_ratio": 1.0914, "grab_orders": 36, "grab_ad_sales": 13950.0}, {"date": "2026-05-27", "revenue": 196855, "facebook": 960.93, "instagram": 278.31, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 852.28, "total_mkt": 2091.52, "mkt_ratio": 1.0625, "grab_orders": 35, "grab_ad_sales": 16000.0}, {"date": "2026-05-28", "revenue": 201765, "facebook": 905.97, "instagram": 279.96, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 861.72, "total_mkt": 2047.65, "mkt_ratio": 1.0149, "grab_orders": 24, "grab_ad_sales": 10690.0}, {"date": "2026-05-29", "revenue": 208965, "facebook": 897.08, "instagram": 308.56, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 860.9, "total_mkt": 2066.54, "mkt_ratio": 0.9889, "grab_orders": 45, "grab_ad_sales": 18350.0}, {"date": "2026-05-30", "revenue": 290078, "facebook": 986.16, "instagram": 303.27, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 858.75, "total_mkt": 2148.18, "mkt_ratio": 0.7406, "grab_orders": 30, "grab_ad_sales": 11455.0}, {"date": "2026-05-31", "revenue": 275588, "facebook": 1134.14, "instagram": 370.41, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 858.83, "total_mkt": 2363.38, "mkt_ratio": 0.8576, "grab_orders": 17, "grab_ad_sales": 5990.0}, {"date": "2026-06-01", "revenue": 232248, "facebook": 1111.6, "instagram": 309.15, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 865.08, "total_mkt": 2285.83, "mkt_ratio": 0.9842, "grab_orders": 37, "grab_ad_sales": 15266.0}, {"date": "2026-06-02", "revenue": 182378, "facebook": 874.93, "instagram": 187.09, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 867.52, "total_mkt": 1929.54, "mkt_ratio": 1.058, "grab_orders": 38, "grab_ad_sales": 15270.0}, {"date": "2026-06-03", "revenue": 287635, "facebook": 692.15, "instagram": 132.49, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 911.27, "total_mkt": 1735.91, "mkt_ratio": 0.6035, "grab_orders": 33, "grab_ad_sales": 9595.0}, {"date": "2026-06-04", "revenue": 178442, "facebook": 824.33, "instagram": 137.54, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1014.17, "total_mkt": 1976.04, "mkt_ratio": 1.1074, "grab_orders": 36, "grab_ad_sales": 11200.0}, {"date": "2026-06-05", "revenue": 214058, "facebook": 846.6, "instagram": 144.59, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1001.25, "total_mkt": 1992.44, "mkt_ratio": 0.9308, "grab_orders": 55, "grab_ad_sales": 19993.0}, {"date": "2026-06-06", "revenue": 276475, "facebook": 960.54, "instagram": 207.77, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1008.57, "total_mkt": 2176.88, "mkt_ratio": 0.7874, "grab_orders": 37, "grab_ad_sales": 12040.0}, {"date": "2026-06-07", "revenue": 295235, "facebook": 1087.44, "instagram": 191.48, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1029.49, "total_mkt": 2308.41, "mkt_ratio": 0.7819, "grab_orders": 21, "grab_ad_sales": 7370.0}, {"date": "2026-06-08", "revenue": 151358, "facebook": 998.54, "instagram": 122.53, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1017.15, "total_mkt": 2138.22, "mkt_ratio": 1.4127, "grab_orders": 36, "grab_ad_sales": 13325.0}, {"date": "2026-06-09", "revenue": 167832, "facebook": 981.93, "instagram": 122.26, "tiktok": 0.0, "influencer_cost": 36798.0, "line_cost": 0.0, "grab_ads": 1000.82, "total_mkt": 38903.01, "mkt_ratio": 23.1797, "grab_orders": 32, "grab_ad_sales": 10165.0}, {"date": "2026-06-10", "revenue": 187625, "facebook": 882.38, "instagram": 112.82, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1008.7, "total_mkt": 2003.9, "mkt_ratio": 1.068, "grab_orders": 23, "grab_ad_sales": 12060.0}, {"date": "2026-06-11", "revenue": 169585, "facebook": 927.01, "instagram": 98.23, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1024.81, "total_mkt": 2050.05, "mkt_ratio": 1.2089, "grab_orders": 35, "grab_ad_sales": 11910.0}, {"date": "2026-06-12", "revenue": 205825, "facebook": 977.53, "instagram": 90.79, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1003.12, "total_mkt": 2071.44, "mkt_ratio": 1.0064, "grab_orders": 29, "grab_ad_sales": 11093.0}, {"date": "2026-06-13", "revenue": 307650, "facebook": 826.85, "instagram": 108.38, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1021.02, "total_mkt": 1956.25, "mkt_ratio": 0.6359, "grab_orders": 33, "grab_ad_sales": 10710.0}, {"date": "2026-06-14", "revenue": 294225, "facebook": 1039.67, "instagram": 110.25, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1010.02, "total_mkt": 2159.94, "mkt_ratio": 0.7341, "grab_orders": 21, "grab_ad_sales": 6620.0}, {"date": "2026-06-15", "revenue": 173752, "facebook": 1130.43, "instagram": 114.7, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1021.2, "total_mkt": 2266.33, "mkt_ratio": 1.3043, "grab_orders": 35, "grab_ad_sales": 13020.0}, {"date": "2026-06-16", "revenue": 192615, "facebook": 1017.19, "instagram": 105.74, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1018.21, "total_mkt": 2141.14, "mkt_ratio": 1.1116, "grab_orders": 37, "grab_ad_sales": 14340.0}, {"date": "2026-06-17", "revenue": 208635, "facebook": 901.98, "instagram": 110.51, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1017.09, "total_mkt": 2029.58, "mkt_ratio": 0.9728, "grab_orders": 32, "grab_ad_sales": 12875.0}, {"date": "2026-06-18", "revenue": 184532, "facebook": 881.24, "instagram": 102.52, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1024.0, "total_mkt": 2007.76, "mkt_ratio": 1.088, "grab_orders": 33, "grab_ad_sales": 13210.0}, {"date": "2026-06-19", "revenue": 218480, "facebook": 825.79, "instagram": 107.88, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1013.34, "total_mkt": 1947.01, "mkt_ratio": 0.8912, "grab_orders": 30, "grab_ad_sales": 9585.0}, {"date": "2026-06-20", "revenue": 304892, "facebook": 787.12, "instagram": 111.66, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1018.79, "total_mkt": 1917.57, "mkt_ratio": 0.6289, "grab_orders": 26, "grab_ad_sales": 8625.0}, {"date": "2026-06-21", "revenue": 321000, "facebook": 1058.17, "instagram": 118.53, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 1008.88, "total_mkt": 2185.58, "mkt_ratio": 0.6809, "grab_orders": 24, "grab_ad_sales": 7260.0}, {"date": "2026-06-22", "revenue": 192685, "facebook": 927.48, "instagram": 113.53, "tiktok": 0.0, "influencer_cost": 0.0, "line_cost": 0.0, "grab_ads": 995.14, "total_mkt": 2036.15, "mkt_ratio": 1.0567, "grab_orders": 39, "grab_ad_sales": 13120.0}, {"date": "2026-06-23", "revenue": 218498, "facebook": 912.76, "instagram": 106.99, "tiktok": 0.0, "influencer_cost": 3500.0, "line_cost": 0.0, "grab_ads": 1009.88, "total_mkt": 5529.63, "mkt_ratio": 2.5307, "grab_orders": 27, "grab_ad_sales": 11230.0}, {"date": "2026-06-24", "revenue": 210670, "facebook": 930.72, "instagram": 106.39, "tiktok": 0, "influencer_cost": 27000.0, "line_cost": 0, "grab_ads": 1018.15, "total_mkt": 29055.26, "mkt_ratio": 13.7918, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-25", "revenue": 216358, "facebook": 389.95, "instagram": 22.39, "tiktok": 0, "influencer_cost": 9500.0, "line_cost": 0, "grab_ads": 1017.89, "total_mkt": 10930.23, "mkt_ratio": 5.0519, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-26", "revenue": 227268, "facebook": 1228.76, "instagram": 148.27, "tiktok": 0, "influencer_cost": 10000.0, "line_cost": 0, "grab_ads": 1018.63, "total_mkt": 12395.66, "mkt_ratio": 5.4542, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-27", "revenue": 323270, "facebook": 1137.76, "instagram": 146.92, "tiktok": 0, "influencer_cost": 8000.0, "line_cost": 0, "grab_ads": 1014.96, "total_mkt": 10299.64, "mkt_ratio": 3.1861, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-28", "revenue": 347988, "facebook": 1051.7, "instagram": 111.58, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1011.68, "total_mkt": 2174.96, "mkt_ratio": 0.625, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-29", "revenue": 196882, "facebook": 1092.41, "instagram": 103.75, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1028.45, "total_mkt": 2224.61, "mkt_ratio": 1.1299, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-06-30", "revenue": 200500, "facebook": 1118.14, "instagram": 118.33, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1013.03, "total_mkt": 2249.5, "mkt_ratio": 1.1219, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-01", "revenue": 245012, "facebook": 987.69, "instagram": 107.45, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1022.62, "total_mkt": 2117.76, "mkt_ratio": 0.8643, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-02", "revenue": 254650, "facebook": 985.64, "instagram": 97.41, "tiktok": 0, "influencer_cost": 6000.0, "line_cost": 0, "grab_ads": 1014.71, "total_mkt": 8097.76, "mkt_ratio": 3.18, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-03", "revenue": 281675, "facebook": 975.15, "instagram": 103.78, "tiktok": 0, "influencer_cost": 5500.0, "line_cost": 0, "grab_ads": 1019.11, "total_mkt": 7598.04, "mkt_ratio": 2.6974, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-04", "revenue": 395270, "facebook": 965.83, "instagram": 104.68, "tiktok": 0, "influencer_cost": 4300.0, "line_cost": 0, "grab_ads": 1009.98, "total_mkt": 6380.49, "mkt_ratio": 1.6142, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-05", "revenue": 409080, "facebook": 1050.18, "instagram": 119.99, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 996.83, "total_mkt": 2167.0, "mkt_ratio": 0.5297, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-06", "revenue": 211478, "facebook": 1033.15, "instagram": 112.19, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1003.78, "total_mkt": 2149.12, "mkt_ratio": 1.0162, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-07", "revenue": 230965, "facebook": 1147.04, "instagram": 110.37, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1018.92, "total_mkt": 2276.33, "mkt_ratio": 0.9856, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-08", "revenue": 237595, "facebook": 1090.09, "instagram": 107.88, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1023.5, "total_mkt": 2221.47, "mkt_ratio": 0.935, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-09", "revenue": 238925, "facebook": 1019.66, "instagram": 110.45, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1014.69, "total_mkt": 2144.8, "mkt_ratio": 0.8977, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-10", "revenue": 253355, "facebook": 1045.49, "instagram": 113.79, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1016.38, "total_mkt": 2175.66, "mkt_ratio": 0.8587, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-11", "revenue": 397215, "facebook": 884.43, "instagram": 103.95, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1006.28, "total_mkt": 1994.66, "mkt_ratio": 0.5022, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-12", "revenue": 386072, "facebook": 1199.5, "instagram": 118.18, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1033.99, "total_mkt": 2351.67, "mkt_ratio": 0.6091, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-13", "revenue": 212265, "facebook": 1059.76, "instagram": 117.39, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1021.47, "total_mkt": 2198.62, "mkt_ratio": 1.0358, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-14", "revenue": 222538, "facebook": 967.13, "instagram": 115.15, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1024.37, "total_mkt": 2106.65, "mkt_ratio": 0.9466, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-15", "revenue": 230910, "facebook": 1024.56, "instagram": 133.05, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1020.26, "total_mkt": 2177.87, "mkt_ratio": 0.9432, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-16", "revenue": 200820, "facebook": 880.43, "instagram": 108.22, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 991.43, "total_mkt": 1980.08, "mkt_ratio": 0.986, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-17", "revenue": 220628, "facebook": 913.94, "instagram": 110.74, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 990.75, "total_mkt": 2015.43, "mkt_ratio": 0.9135, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-18", "revenue": 315952, "facebook": 885.77, "instagram": 104.09, "tiktok": 0, "influencer_cost": 12000.0, "line_cost": 0, "grab_ads": 1011.14, "total_mkt": 14001.0, "mkt_ratio": 4.4314, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-19", "revenue": 292535, "facebook": 997.66, "instagram": 115.04, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1010.72, "total_mkt": 2123.42, "mkt_ratio": 0.7259, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-20", "revenue": 178612, "facebook": 1219.67, "instagram": 103.54, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 946.63, "total_mkt": 2269.84, "mkt_ratio": 1.2708, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-21", "revenue": 233110, "facebook": 1137.77, "instagram": 119.64, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1009.35, "total_mkt": 2266.76, "mkt_ratio": 0.9724, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-22", "revenue": 232860, "facebook": 1192.98, "instagram": 94.56, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1017.79, "total_mkt": 2305.33, "mkt_ratio": 0.99, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-23", "revenue": 223240, "facebook": 1107.76, "instagram": 152.62, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1020.26, "total_mkt": 2280.64, "mkt_ratio": 1.0216, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-24", "revenue": 255910, "facebook": 1137.65, "instagram": 167.39, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1015.53, "total_mkt": 2320.57, "mkt_ratio": 0.9068, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-25", "revenue": 333540, "facebook": 1248.88, "instagram": 193.12, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1004.73, "total_mkt": 2446.73, "mkt_ratio": 0.7336, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-26", "revenue": 344280, "facebook": 1352.31, "instagram": 191.28, "tiktok": 0, "influencer_cost": 30000.0, "line_cost": 0, "grab_ads": 940.31, "total_mkt": 32483.9, "mkt_ratio": 9.4353, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-27", "revenue": 233945, "facebook": 1267.62, "instagram": 153.14, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 967.49, "total_mkt": 2388.25, "mkt_ratio": 1.0209, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-28", "revenue": 307365, "facebook": 1015.98, "instagram": 146.17, "tiktok": 0, "influencer_cost": 17000.0, "line_cost": 0, "grab_ads": 993.44, "total_mkt": 19155.59, "mkt_ratio": 6.2322, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-29", "revenue": 304835, "facebook": 1444.93, "instagram": 119.86, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 942.43, "total_mkt": 2507.22, "mkt_ratio": 0.8225, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-30", "revenue": 242365, "facebook": 1114.54, "instagram": 131.55, "tiktok": 0, "influencer_cost": 7500.0, "line_cost": 0, "grab_ads": 1016.19, "total_mkt": 9762.28, "mkt_ratio": 4.0279, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-07-31", "revenue": 255295, "facebook": 1445.21, "instagram": 150.73, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1009.45, "total_mkt": 2605.39, "mkt_ratio": 1.0205, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-08-01", "revenue": 351745, "facebook": 1142.24, "instagram": 115.77, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1019.9, "total_mkt": 2277.91, "mkt_ratio": 0.6476, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-08-02", "revenue": 353346, "facebook": 1363.05, "instagram": 134.38, "tiktok": 0, "influencer_cost": 7500.0, "line_cost": 0, "grab_ads": 1007.57, "total_mkt": 10005.0, "mkt_ratio": 2.8315, "grab_orders": 0, "grab_ad_sales": 0}, {"date": "2026-08-03", "revenue": 215110, "facebook": 1167.19, "instagram": 111.28, "tiktok": 0, "influencer_cost": 0.0, "line_cost": 0, "grab_ads": 1019.12, "total_mkt": 2297.59, "mkt_ratio": 1.0681, "grab_orders": 0, "grab_ad_sales": 0}];;
+
+const MONTHLY = [{"month":"2026-01-01","facebook":43161.52,"instagram":3463.91,"tiktok":6195.75,"influencer_cost":165539.14,"line_cost":25079.64,"grab_ads":9391.44,"revenue":8176175.0,"total_mkt":252831.4,"mkt_ratio":3.0923,"grab_orders":228,"grab_ad_sales":74665.0,"partial":false,"grab_mkt_fee":0},{"month":"2026-02-01","facebook":41087.65,"instagram":2403.7,"tiktok":4743.44,"influencer_cost":23110.0,"line_cost":23401.65,"grab_ads":8986.0,"revenue":7284360.0,"total_mkt":103732.44,"mkt_ratio":1.424,"grab_orders":341,"grab_ad_sales":128275.0,"partial":false,"grab_mkt_fee":0},{"month":"2026-03-01","facebook":36864.42,"instagram":5743.97,"tiktok":30.12,"influencer_cost":73956.94,"line_cost":21393.41,"grab_ads":21190.0,"revenue":7651632.5,"total_mkt":159178.86,"mkt_ratio":2.0803,"grab_orders":590,"grab_ad_sales":225079.0,"partial":false,"grab_mkt_fee":0},{"month":"2026-04-01","facebook":33993.55,"instagram":9182.08,"tiktok":11716.09,"influencer_cost":99450.0,"line_cost":20505.52,"grab_ads":24235.0,"revenue":6605110.0,"total_mkt":199082.24,"mkt_ratio":3.0141,"grab_orders":591,"grab_ad_sales":212200.0,"partial":false,"grab_mkt_fee":0},{"month":"2026-05-01","facebook":32133.62,"instagram":9369.98,"tiktok":1932.22,"influencer_cost":35500.0,"line_cost":16599.53,"grab_ads":27845.0,"revenue":7172927.5,"total_mkt":123380.35,"mkt_ratio":1.7201,"grab_orders":757,"grab_ad_sales":273969.0,"partial":false,"grab_mkt_fee":0},{"month":"2026-06-01","facebook":28423.09,"instagram":3825.07,"tiktok":0.0,"influencer_cost":94798.0,"line_cost":10854.34,"grab_ads":32135.0,"revenue":6888595.0,"total_mkt":230588.5,"mkt_ratio":3.3474,"grab_orders":749,"grab_ad_sales":269882.0,"partial":false,"grab_mkt_fee":60553},{"month":"2026-07-01","facebook":33798.41,"instagram":3837.39,"tiktok":0,"influencer_cost":82300.0,"line_cost":8634.62,"grab_ads":33314.0,"revenue":8382297.7,"total_mkt":196162.42,"mkt_ratio":2.3402,"grab_orders":0,"grab_ad_sales":0,"partial":false,"grab_mkt_fee":34278},{"month":"2026-08-01","facebook":3672.48,"instagram":361.43,"tiktok":0,"influencer_cost":7500.0,"line_cost":2498.45,"grab_ads":4342.0,"revenue":920200.5,"total_mkt":18374.36,"mkt_ratio":1.9968,"grab_orders":0,"grab_ad_sales":0,"partial":true,"grab_mkt_fee":0}];;
+
+const BRANCH = [{"month": "2026-01-01", "Central World": 1786747.5, "The Circle Ratchapruk": 2655945.0, "The Market Place Thonglor": 896000.0, "ลาซาล": 2837482.5, "Central Ladprao": 0.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-02-01", "Central World": 1734057.5, "The Circle Ratchapruk": 2318837.5, "The Market Place Thonglor": 1029907.5, "ลาซาล": 2201557.5, "Central Ladprao": 0.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-03-01", "Central World": 1835967.5, "The Circle Ratchapruk": 2236712.5, "The Market Place Thonglor": 1056162.5, "ลาซาล": 2152365.0, "Central Ladprao": 370425.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-04-01", "Central World": 1710982.5, "The Circle Ratchapruk": 1939617.5, "The Market Place Thonglor": 945930.0, "ลาซาล": 1895185.0, "Central Ladprao": 113395.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-05-01", "Central World": 2078102.5, "The Circle Ratchapruk": 1926800.0, "The Market Place Thonglor": 1058347.5, "ลาซาล": 2109677.5, "Central Ladprao": 0.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-06-01", "Central World": 2017595.0, "The Circle Ratchapruk": 1751950.0, "The Market Place Thonglor": 1076070.0, "ลาซาล": 2042980.0, "Central Ladprao": 0.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 0.0}, {"month": "2026-07-01", "Central World": 2079870.2, "The Circle Ratchapruk": 1905460.0, "The Market Place Thonglor": 1317297.5, "ลาซาล": 2027642.5, "Central Ladprao": 0.0, "Seacon Bangkae": 649712.5, "Ngamwongwan": 402315.0}, {"month": "2026-08-01", "Central World": 206415.0, "The Circle Ratchapruk": 231553.0, "The Market Place Thonglor": 141695.0, "ลาซาล": 217452.5, "Central Ladprao": 0.0, "Seacon Bangkae": 0.0, "Ngamwongwan": 123085.0}];
+
+const CHANNEL_DAILY = [{"d":"2026-01-01","w":253550.0,"l":16395.0,"g":5820.0,"s":0.0},{"d":"2026-01-02","w":203130.0,"l":12250.0,"g":4295.0,"s":0.0},{"d":"2026-01-03","w":279112.5,"l":25390.0,"g":17505.0,"s":0.0},{"d":"2026-01-04","w":280795.0,"l":27005.0,"g":21125.0,"s":0.0},{"d":"2026-01-05","w":152682.5,"l":52975.0,"g":23980.0,"s":0.0},{"d":"2026-01-06","w":162280.0,"l":44070.0,"g":12215.0,"s":0.0},{"d":"2026-01-07","w":163125.0,"l":45865.0,"g":16305.0,"s":0.0},{"d":"2026-01-08","w":184265.0,"l":37755.0,"g":16275.0,"s":0.0},{"d":"2026-01-09","w":184595.0,"l":41305.0,"g":20675.0,"s":0.0},{"d":"2026-01-10","w":267385.0,"l":24765.0,"g":9710.0,"s":0.0},{"d":"2026-01-11","w":257260.0,"l":27190.0,"g":9170.0,"s":0.0},{"d":"2026-01-12","w":157665.0,"l":45260.0,"g":25780.0,"s":0.0},{"d":"2026-01-13","w":143750.0,"l":43430.0,"g":24115.0,"s":0.0},{"d":"2026-01-14","w":167050.0,"l":50370.0,"g":15390.0,"s":0.0},{"d":"2026-01-15","w":184585.0,"l":45990.0,"g":17050.0,"s":0.0},{"d":"2026-01-16","w":193430.0,"l":40115.0,"g":19810.0,"s":0.0},{"d":"2026-01-17","w":279455.0,"l":26700.0,"g":20785.0,"s":0.0},{"d":"2026-01-18","w":270350.0,"l":29585.0,"g":16620.0,"s":0.0},{"d":"2026-01-19","w":157095.0,"l":40495.0,"g":19325.0,"s":0.0},{"d":"2026-01-20","w":142230.0,"l":44755.0,"g":26115.0,"s":0.0},{"d":"2026-01-21","w":157482.5,"l":30400.0,"g":27315.0,"s":0.0},{"d":"2026-01-22","w":180232.5,"l":36510.0,"g":21080.0,"s":0.0},{"d":"2026-01-23","w":169552.5,"l":47555.0,"g":40685.0,"s":0.0},{"d":"2026-01-24","w":282975.0,"l":27625.0,"g":29325.0,"s":0.0},{"d":"2026-01-25","w":285587.5,"l":27850.0,"g":22375.0,"s":0.0},{"d":"2026-01-26","w":159827.5,"l":53170.0,"g":41850.0,"s":0.0},{"d":"2026-01-27","w":168500.0,"l":43975.0,"g":45425.0,"s":0.0},{"d":"2026-01-28","w":160170.0,"l":41765.0,"g":35180.0,"s":0.0},{"d":"2026-01-29","w":203925.0,"l":31565.0,"g":42520.0,"s":0.0},{"d":"2026-01-30","w":197597.5,"l":35380.0,"g":39675.0,"s":0.0},{"d":"2026-01-31","w":275455.0,"l":30900.0,"g":35225.0,"s":0.0},{"d":"2026-02-01","w":293537.5,"l":20410.0,"g":24595.0,"s":0.0},{"d":"2026-02-02","w":161245.0,"l":37640.0,"g":42005.0,"s":0.0},{"d":"2026-02-03","w":164205.0,"l":37980.0,"g":43445.0,"s":0.0},{"d":"2026-02-04","w":171345.0,"l":28945.0,"g":38770.0,"s":0.0},{"d":"2026-02-05","w":185120.0,"l":24675.0,"g":35685.0,"s":0.0},{"d":"2026-02-06","w":218510.0,"l":47050.0,"g":36370.0,"s":0.0},{"d":"2026-02-07","w":272585.0,"l":30415.0,"g":39675.0,"s":0.0},{"d":"2026-02-08","w":294520.0,"l":19275.0,"g":22930.0,"s":0.0},{"d":"2026-02-09","w":149730.0,"l":34725.0,"g":33145.0,"s":0.0},{"d":"2026-02-10","w":169860.0,"l":30535.0,"g":32765.0,"s":0.0},{"d":"2026-02-11","w":158902.5,"l":32690.0,"g":42195.0,"s":0.0},{"d":"2026-02-12","w":163900.0,"l":39415.0,"g":42930.0,"s":0.0},{"d":"2026-02-13","w":158750.0,"l":32405.0,"g":44915.0,"s":0.0},{"d":"2026-02-14","w":263835.0,"l":29250.0,"g":31620.0,"s":0.0},{"d":"2026-02-15","w":229085.0,"l":27765.0,"g":39840.0,"s":0.0},{"d":"2026-02-16","w":116922.5,"l":20235.0,"g":27840.0,"s":0.0},{"d":"2026-02-17","w":163225.0,"l":25935.0,"g":35225.0,"s":0.0},{"d":"2026-02-18","w":144365.0,"l":16650.0,"g":38960.0,"s":0.0},{"d":"2026-02-19","w":144630.0,"l":30165.0,"g":33240.0,"s":0.0},{"d":"2026-02-20","w":188800.0,"l":30295.0,"g":40425.0,"s":0.0},{"d":"2026-02-21","w":260235.0,"l":28695.0,"g":28360.0,"s":0.0},{"d":"2026-02-22","w":283665.0,"l":25890.0,"g":35435.0,"s":0.0},{"d":"2026-02-23","w":148060.0,"l":27930.0,"g":37220.0,"s":0.0},{"d":"2026-02-24","w":147320.0,"l":28630.0,"g":38175.0,"s":0.0},{"d":"2026-02-25","w":149605.0,"l":24080.0,"g":40395.0,"s":0.0},{"d":"2026-02-26","w":170220.0,"l":28480.0,"g":30980.0,"s":0.0},{"d":"2026-02-27","w":197452.5,"l":36110.0,"g":37720.0,"s":0.0},{"d":"2026-02-28","w":277865.0,"l":38745.0,"g":26990.0,"s":0.0},{"d":"2026-03-01","w":262812.5,"l":24010.0,"g":41780.0,"s":0.0},{"d":"2026-03-02","w":155450.0,"l":27755.0,"g":35160.0,"s":0.0},{"d":"2026-03-03","w":229745.0,"l":36130.0,"g":27575.0,"s":0.0},{"d":"2026-03-04","w":136720.0,"l":29715.0,"g":41475.0,"s":0.0},{"d":"2026-03-05","w":142310.0,"l":27855.0,"g":35310.0,"s":0.0},{"d":"2026-03-06","w":177515.0,"l":28995.0,"g":38335.0,"s":0.0},{"d":"2026-03-07","w":251810.0,"l":25835.0,"g":31645.0,"s":0.0},{"d":"2026-03-08","w":256520.0,"l":23155.0,"g":29010.0,"s":0.0},{"d":"2026-03-09","w":144050.0,"l":26820.0,"g":32505.0,"s":0.0},{"d":"2026-03-10","w":149745.0,"l":31965.0,"g":34630.0,"s":0.0},{"d":"2026-03-11","w":119435.0,"l":35745.0,"g":35445.0,"s":0.0},{"d":"2026-03-12","w":124355.0,"l":36990.0,"g":37070.0,"s":0.0},{"d":"2026-03-13","w":160105.0,"l":25150.0,"g":36980.0,"s":0.0},{"d":"2026-03-14","w":254125.0,"l":23625.0,"g":27725.0,"s":0.0},{"d":"2026-03-15","w":247067.5,"l":25070.0,"g":29155.0,"s":0.0},{"d":"2026-03-16","w":140035.0,"l":21185.0,"g":30160.0,"s":0.0},{"d":"2026-03-17","w":148635.0,"l":17190.0,"g":29485.0,"s":0.0},{"d":"2026-03-18","w":126442.5,"l":30005.0,"g":40135.0,"s":0.0},{"d":"2026-03-19","w":136305.0,"l":51165.0,"g":38675.0,"s":0.0},{"d":"2026-03-20","w":146205.0,"l":37085.0,"g":36325.0,"s":0.0},{"d":"2026-03-21","w":242610.0,"l":34305.0,"g":29535.0,"s":0.0},{"d":"2026-03-22","w":243630.0,"l":21520.0,"g":26850.0,"s":0.0},{"d":"2026-03-23","w":122460.0,"l":20765.0,"g":40955.0,"s":0.0},{"d":"2026-03-24","w":120835.0,"l":28185.0,"g":27940.0,"s":0.0},{"d":"2026-03-25","w":133952.5,"l":20765.0,"g":39275.0,"s":0.0},{"d":"2026-03-26","w":124800.0,"l":27870.0,"g":35870.0,"s":0.0},{"d":"2026-03-27","w":202960.0,"l":29980.0,"g":37210.0,"s":0.0},{"d":"2026-03-28","w":285945.0,"l":22055.0,"g":37970.0,"s":0.0},{"d":"2026-03-29","w":307610.0,"l":30340.0,"g":30695.0,"s":0.0},{"d":"2026-03-30","w":192010.0,"l":27915.0,"g":34475.0,"s":0.0},{"d":"2026-03-31","w":216987.5,"l":36400.0,"g":33545.0,"s":0.0},{"d":"2026-04-01","w":224180.0,"l":30020.0,"g":29715.0,"s":140.0},{"d":"2026-04-02","w":136835.0,"l":21045.0,"g":35675.0,"s":170.0},{"d":"2026-04-03","w":136317.5,"l":31005.0,"g":27465.0,"s":0.0},{"d":"2026-04-04","w":222757.5,"l":21325.0,"g":27335.0,"s":225.0},{"d":"2026-04-05","w":225310.0,"l":22160.0,"g":21765.0,"s":85.0},{"d":"2026-04-06","w":160545.0,"l":21030.0,"g":29560.0,"s":120.0},{"d":"2026-04-07","w":94860.0,"l":27690.0,"g":21135.0,"s":225.0},{"d":"2026-04-08","w":109315.0,"l":28350.0,"g":31475.0,"s":290.0},{"d":"2026-04-09","w":119005.0,"l":22155.0,"g":33650.0,"s":250.0},{"d":"2026-04-10","w":125762.5,"l":33845.0,"g":41500.0,"s":1775.0},{"d":"2026-04-11","w":227617.5,"l":27615.0,"g":26920.0,"s":1170.0},{"d":"2026-04-12","w":213642.5,"l":30590.0,"g":26235.0,"s":475.0},{"d":"2026-04-13","w":234072.5,"l":26965.0,"g":18845.0,"s":870.0},{"d":"2026-04-14","w":223965.0,"l":22325.0,"g":24145.0,"s":1020.0},{"d":"2026-04-15","w":236910.0,"l":15255.0,"g":13355.0,"s":470.0},{"d":"2026-04-16","w":128270.0,"l":27020.0,"g":29000.0,"s":865.0},{"d":"2026-04-17","w":155725.0,"l":19515.0,"g":23410.0,"s":320.0},{"d":"2026-04-18","w":205515.0,"l":25320.0,"g":26115.0,"s":730.0},{"d":"2026-04-19","w":217230.0,"l":20790.0,"g":29245.0,"s":245.0},{"d":"2026-04-20","w":98540.0,"l":31215.0,"g":29455.0,"s":1190.0},{"d":"2026-04-21","w":115520.0,"l":30770.0,"g":30165.0,"s":1860.0},{"d":"2026-04-22","w":115060.0,"l":33895.0,"g":29945.0,"s":470.0},{"d":"2026-04-23","w":126812.5,"l":22990.0,"g":34125.0,"s":1090.0},{"d":"2026-04-24","w":136530.0,"l":31680.0,"g":38390.0,"s":1110.0},{"d":"2026-04-25","w":211060.0,"l":28985.0,"g":27240.0,"s":215.0},{"d":"2026-04-26","w":225980.0,"l":22145.0,"g":26995.0,"s":1460.0},{"d":"2026-04-27","w":117025.0,"l":25795.0,"g":31450.0,"s":940.0},{"d":"2026-04-28","w":121320.0,"l":26505.0,"g":31455.0,"s":2705.0},{"d":"2026-04-29","w":121500.0,"l":26075.0,"g":34195.0,"s":3030.0},{"d":"2026-04-30","w":144102.5,"l":32015.0,"g":33240.0,"s":1020.0},{"d":"2026-05-01","w":226877.5,"l":23505.0,"g":27965.0,"s":2225.0},{"d":"2026-05-02","w":217460.0,"l":25500.0,"g":28875.0,"s":2605.0},{"d":"2026-05-03","w":228615.0,"l":17170.0,"g":34320.0,"s":2075.0},{"d":"2026-05-04","w":177450.0,"l":19365.0,"g":28780.0,"s":1665.0},{"d":"2026-05-05","w":115260.0,"l":23890.0,"g":32815.0,"s":3565.0},{"d":"2026-05-06","w":113927.5,"l":20605.0,"g":37995.0,"s":1235.0},{"d":"2026-05-07","w":114960.0,"l":26195.0,"g":37395.0,"s":2365.0},{"d":"2026-05-08","w":131525.0,"l":20470.0,"g":44900.0,"s":1375.0},{"d":"2026-05-09","w":211405.0,"l":30325.0,"g":31870.0,"s":2055.0},{"d":"2026-05-10","w":235395.0,"l":27840.0,"g":37535.0,"s":3020.0},{"d":"2026-05-11","w":107365.0,"l":31750.0,"g":31590.0,"s":1475.0},{"d":"2026-05-12","w":121915.0,"l":21330.0,"g":36010.0,"s":1675.0},{"d":"2026-05-13","w":143347.5,"l":18210.0,"g":35280.0,"s":2950.0},{"d":"2026-05-14","w":128912.5,"l":25500.0,"g":36495.0,"s":2915.0},{"d":"2026-05-15","w":145950.0,"l":30470.0,"g":34995.0,"s":2015.0},{"d":"2026-05-16","w":252625.0,"l":24925.0,"g":32835.0,"s":3875.0},{"d":"2026-05-17","w":249590.0,"l":22045.0,"g":40880.0,"s":4070.0},{"d":"2026-05-18","w":112565.0,"l":25900.0,"g":48205.0,"s":1710.0},{"d":"2026-05-19","w":127940.0,"l":24390.0,"g":34900.0,"s":1030.0},{"d":"2026-05-20","w":121060.0,"l":30885.0,"g":43115.0,"s":4415.0},{"d":"2026-05-21","w":131895.0,"l":23805.0,"g":47615.0,"s":3265.0},{"d":"2026-05-22","w":141895.0,"l":25810.0,"g":54285.0,"s":5065.0},{"d":"2026-05-23","w":250705.0,"l":28625.0,"g":41640.0,"s":1990.0},{"d":"2026-05-24","w":263670.0,"l":28055.0,"g":39055.0,"s":3450.0},{"d":"2026-05-25","w":100520.0,"l":25010.0,"g":44775.0,"s":3985.0},{"d":"2026-05-26","w":125947.5,"l":19900.0,"g":46990.0,"s":2240.0},{"d":"2026-05-27","w":128110.0,"l":22905.0,"g":43740.0,"s":2100.0},{"d":"2026-05-28","w":132805.0,"l":22110.0,"g":45155.0,"s":1695.0},{"d":"2026-05-29","w":130495.0,"l":32670.0,"g":43950.0,"s":1850.0},{"d":"2026-05-30","w":205362.5,"l":26660.0,"g":54405.0,"s":3650.0},{"d":"2026-05-31","w":225342.5,"l":23700.0,"g":22860.0,"s":3685.0},{"d":"2026-06-01","w":179407.5,"l":20895.0,"g":31495.0,"s":450.0},{"d":"2026-06-02","w":122037.5,"l":22245.0,"g":35875.0,"s":2220.0},{"d":"2026-06-03","w":228300.0,"l":24885.0,"g":32960.0,"s":1490.0},{"d":"2026-06-04","w":116932.5,"l":22670.0,"g":34030.0,"s":4810.0},{"d":"2026-06-05","w":140432.5,"l":30235.0,"g":42345.0,"s":1045.0},{"d":"2026-06-06","w":211425.0,"l":26275.0,"g":31660.0,"s":7115.0},{"d":"2026-06-07","w":229080.0,"l":28230.0,"g":36270.0,"s":1655.0},{"d":"2026-06-08","w":89687.5,"l":22060.0,"g":35655.0,"s":3955.0},{"d":"2026-06-09","w":103717.5,"l":26340.0,"g":34310.0,"s":3465.0},{"d":"2026-06-10","w":122720.0,"l":24795.0,"g":37020.0,"s":3090.0},{"d":"2026-06-11","w":98870.0,"l":22655.0,"g":45160.0,"s":2900.0},{"d":"2026-06-12","w":142880.0,"l":20065.0,"g":40970.0,"s":1910.0},{"d":"2026-06-13","w":240355.0,"l":20520.0,"g":42360.0,"s":4415.0},{"d":"2026-06-14","w":234130.0,"l":26205.0,"g":30595.0,"s":3295.0},{"d":"2026-06-15","w":105387.5,"l":22640.0,"g":41320.0,"s":4405.0},{"d":"2026-06-16","w":121970.0,"l":29490.0,"g":38345.0,"s":2810.0},{"d":"2026-06-17","w":142775.0,"l":23750.0,"g":39185.0,"s":2925.0},{"d":"2026-06-18","w":116527.5,"l":22845.0,"g":40680.0,"s":4480.0},{"d":"2026-06-19","w":147575.0,"l":27000.0,"g":40855.0,"s":3050.0},{"d":"2026-06-20","w":241137.5,"l":20915.0,"g":38300.0,"s":4540.0},{"d":"2026-06-21","w":263025.0,"l":22840.0,"g":30620.0,"s":4515.0},{"d":"2026-06-22","w":124780.0,"l":25125.0,"g":39165.0,"s":3615.0},{"d":"2026-06-23","w":142647.5,"l":30205.0,"g":41915.0,"s":3730.0},{"d":"2026-06-24","w":136950.0,"l":25850.0,"g":45575.0,"s":2295.0},{"d":"2026-06-25","w":147137.5,"l":24940.0,"g":38315.0,"s":5965.0},{"d":"2026-06-26","w":165052.5,"l":20070.0,"g":40795.0,"s":1350.0},{"d":"2026-06-27","w":255290.0,"l":24980.0,"g":39655.0,"s":3345.0},{"d":"2026-06-28","w":281087.5,"l":30470.0,"g":34885.0,"s":1545.0},{"d":"2026-06-29","w":136547.5,"l":14965.0,"g":42180.0,"s":3190.0},{"d":"2026-06-30","w":131890.0,"l":20490.0,"g":46060.0,"s":2060.0},{"d":"2026-07-01","w":164047.5,"l":24175.0,"g":54780.0,"s":2010.0},{"d":"2026-07-02","w":171580.0,"l":34125.0,"g":44225.0,"s":4720.0},{"d":"2026-07-03","w":200220.0,"l":30565.0,"g":48850.0,"s":2040.0},{"d":"2026-07-04","w":331120.0,"l":27940.0,"g":33110.0,"s":3100.0},{"d":"2026-07-05","w":337130.0,"l":28160.0,"g":41650.0,"s":2140.0},{"d":"2026-07-06","w":147257.5,"l":23075.0,"g":37735.0,"s":3410.0},{"d":"2026-07-07","w":147025.0,"l":30925.0,"g":48790.0,"s":4225.0},{"d":"2026-07-08","w":163330.0,"l":28795.0,"g":42875.0,"s":2595.0},{"d":"2026-07-09","w":159180.0,"l":36390.0,"g":41075.0,"s":2280.0},{"d":"2026-07-10","w":174505.0,"l":29060.0,"g":46495.0,"s":3295.0},{"d":"2026-07-11","w":320630.0,"l":36665.0,"g":35990.0,"s":3930.0},{"d":"2026-07-12","w":314682.5,"l":22535.0,"g":45535.0,"s":3320.0},{"d":"2026-07-13","w":156590.0,"l":22060.0,"g":31675.0,"s":1940.0},{"d":"2026-07-14","w":150867.5,"l":27655.0,"g":39890.0,"s":4125.0},{"d":"2026-07-15","w":165870.0,"l":23130.0,"g":38760.0,"s":3150.0},{"d":"2026-07-16","w":124645.0,"l":27980.0,"g":44065.0,"s":4130.0},{"d":"2026-07-17","w":151307.5,"l":25105.0,"g":41910.0,"s":2305.0},{"d":"2026-07-18","w":253042.5,"l":23485.0,"g":35980.0,"s":3445.0},{"d":"2026-07-19","w":232365.0,"l":22055.0,"g":36035.0,"s":2080.0},{"d":"2026-07-20","w":105982.5,"l":20645.0,"g":50095.0,"s":1890.0},{"d":"2026-07-21","w":156580.0,"l":33090.0,"g":37590.0,"s":5850.0},{"d":"2026-07-22","w":156140.0,"l":29535.0,"g":43720.0,"s":3465.0},{"d":"2026-07-23","w":159745.0,"l":29185.0,"g":31560.0,"s":2750.0},{"d":"2026-07-24","w":172425.0,"l":36020.0,"g":43880.0,"s":3585.0},{"d":"2026-07-25","w":268770.2,"l":31840.0,"g":30040.0,"s":2890.0},{"d":"2026-07-26","w":274390.0,"l":29525.0,"g":34660.0,"s":5705.0},{"d":"2026-07-27","w":164290.0,"l":27555.0,"g":36770.0,"s":5330.0},{"d":"2026-07-28","w":254520.0,"l":25910.0,"g":24520.0,"s":2415.0},{"d":"2026-07-29","w":252625.0,"l":23735.0,"g":26560.0,"s":1915.0},{"d":"2026-07-30","w":168430.0,"l":29075.0,"g":42775.0,"s":2085.0},{"d":"2026-07-31","w":172735.0,"l":36490.0,"g":39605.0,"s":6465.0},{"d":"2026-08-01","w":282045.0,"l":30815.0,"g":35185.0,"s":3700.0},{"d":"2026-08-02","w":289680.5,"l":22715.0,"g":37165.0,"s":3785.0},{"d":"2026-08-03","w":144120.0,"l":24885.0,"g":41475.0,"s":4630.0}];
+const CHANNEL_COLORS = {walkin:'#f4a742',lineman:'#00B900',grab:'#00b4d8',shopee:'#f97316'};
+const CHANNEL_LABELS = {walkin:'Walk-in',lineman:'LINE MAN',grab:'Grab',shopee:'ShopeeFood'};
+const CH_KEYS = ['walkin','lineman','grab','shopee'];
+const CH_MAP = {walkin:'w',lineman:'l',grab:'g',shopee:'s'};
+
+const GRAB_BRANCH_MONTHLY = [{"month": "2026-01-01", "branch": "ลาซาล", "spend": 9391.44, "sales": 74665.0, "orders": 228, "roas": 7.95}, {"month": "2026-02-01", "branch": "Thonglor", "spend": 1657.04, "sales": 31020.0, "orders": 81, "roas": 18.72}, {"month": "2026-02-01", "branch": "ลาซาล", "spend": 8510.14, "sales": 97255.0, "orders": 260, "roas": 11.43}, {"month": "2026-03-01", "branch": "CTW", "spend": 3121.64, "sales": 25385.0, "orders": 73, "roas": 8.13}, {"month": "2026-03-01", "branch": "The Circle", "spend": 3214.0, "sales": 29810.0, "orders": 83, "roas": 9.28}, {"month": "2026-03-01", "branch": "Thonglor", "spend": 4719.7, "sales": 97834.0, "orders": 232, "roas": 20.73}, {"month": "2026-03-01", "branch": "ลาซาล", "spend": 7622.47, "sales": 72050.0, "orders": 202, "roas": 9.45}, {"month": "2026-04-01", "branch": "CTW", "spend": 4402.09, "sales": 41298.0, "orders": 99, "roas": 9.38}, {"month": "2026-04-01", "branch": "The Circle", "spend": 4532.31, "sales": 35812.0, "orders": 107, "roas": 7.9}, {"month": "2026-04-01", "branch": "Thonglor", "spend": 4542.24, "sales": 85580.0, "orders": 233, "roas": 18.84}, {"month": "2026-04-01", "branch": "ลาซาล", "spend": 5458.29, "sales": 49510.0, "orders": 152, "roas": 9.07}, {"month": "2026-05-01", "branch": "CTW", "spend": 4637.69, "sales": 57540.0, "orders": 151, "roas": 12.41}, {"month": "2026-05-01", "branch": "The Circle", "spend": 4698.15, "sales": 47624.0, "orders": 140, "roas": 10.14}, {"month": "2026-05-01", "branch": "Thonglor", "spend": 4675.34, "sales": 93100.0, "orders": 248, "roas": 19.91}, {"month": "2026-05-01", "branch": "ลาซาล", "spend": 6215.82, "sales": 75705.0, "orders": 218, "roas": 12.18}, {"month": "2026-06-01", "branch": "CTW", "spend": 3471.75, "sales": 53970.0, "orders": 140, "roas": 15.55}, {"month": "2026-06-01", "branch": "The Circle", "spend": 3480.25, "sales": 45163.0, "orders": 144, "roas": 12.98}, {"month": "2026-06-01", "branch": "Thonglor", "spend": 6730.13, "sales": 106758.0, "orders": 293, "roas": 15.86}, {"month": "2026-06-01", "branch": "ลาซาล", "spend": 6108.05, "sales": 63991.0, "orders": 172, "roas": 10.48}, {"month": "2026-07-01", "branch": "CTW", "spend": 4513.32, "sales": 0, "orders": 0, "roas": 0}, {"month": "2026-07-01", "branch": "The Circle", "spend": 4716.72, "sales": 56150, "orders": 178, "roas": 11.91}, {"month": "2026-07-01", "branch": "Thonglor", "spend": 9242.9, "sales": 151480, "orders": 416, "roas": 16.39}, {"month": "2026-07-01", "branch": "ลาซาล", "spend": 12661.59, "sales": 83314, "orders": 257, "roas": 6.58}];
+const GRAB_BRANCHES = ['Lasalle','Thonglor','CTW','The Circle'];
+const GRAB_BRANCH_COLORS = {Lasalle:'#f59e0b',Thonglor:'#ec4899',CTW:'#3b82f6','The Circle':'#10b981'};
+
+const BRANCHES = ['ลาซาล','The Circle Ratchapruk','Central World','The Market Place Thonglor','Central Ladprao','Seacon Bangkae','Ngamwongwan'];
+const BRANCH_COLORS = {'ลาซาล':'#f59e0b','The Circle Ratchapruk':'#10b981','Central World':'#3b82f6','The Market Place Thonglor':'#ec4899','Central Ladprao':'#8b5cf6','Seacon Bangkae':'#06b6d4','Ngamwongwan':'#a78bfa'};
+const COST_BRANCH_COLORS = {'ลาซาล':'#f59e0b','CTW':'#3b82f6','Central World':'#3b82f6','Thonglor':'#ec4899','The Market Place Thonglor':'#ec4899','The Circle':'#10b981','The Circle Ratchapruk':'#10b981','Central Ladprao':'#8b5cf6','Seacon Bangkae':'#06b6d4','Seacon':'#06b6d4','Ngamwongwan':'#a78bfa'};
+const MONTH_LABELS = {'2026-01':'ม.ค.','2026-02':'ก.พ.','2026-03':'มี.ค.','2026-04':'เม.ย.','2026-05':'พ.ค.','2026-06':'มิ.ย.','2026-07':'ก.ค.','2026-08':'ส.ค.'};
+
+// ═══════════════ STATE ═══════════════
+let currentView = 'monthly';
+let currentMonth = 'all';
+let mainChart = null, donutChart = null;
+
+// ═══════════════ UTILS ═══════════════
+const fmt = (n,d=0) => n>=1e6?'฿'+(n/1e6).toFixed(2)+'M':n>=1e3?'฿'+(n/1e3).toFixed(1)+'K':'฿'+n.toFixed(d);
+const fmtFull = n => '฿'+Math.round(n).toLocaleString('th-TH');
+
+// ═══════════════ KPIs ═══════════════
+function buildKPIs() {
+  const filtered = currentMonth === 'all' ? MONTHLY : MONTHLY.filter(d => d.month.startsWith(currentMonth));
+  const totalFB   = filtered.reduce((s,d)=>s+d.facebook,0);
+  const totalIG   = filtered.reduce((s,d)=>s+d.instagram,0);
+  const totalTT   = filtered.reduce((s,d)=>s+(d.tiktok||0),0);
+  const totalKOL  = filtered.reduce((s,d)=>s+d.influencer_cost,0);
+  const totalLine    = filtered.reduce((s,d)=>s+(d.line_cost||0),0);
+  const totalGrabAds = filtered.reduce((s,d)=>s+(d.grab_ads||0),0);
+  const totalMKT  = filtered.reduce((s,d)=>s+d.total_mkt,0);
+  const totalRev  = filtered.reduce((s,d)=>s+d.revenue,0);
+  const ratio     = totalRev>0 ? totalMKT/totalRev*100 : 0;
+  const totalGrabOrders = filtered.reduce((s,d)=>s+(d.grab_orders||0),0);
+  const totalGrabSales  = filtered.reduce((s,d)=>s+(d.grab_ad_sales||0),0);
+  const avgGrabROAS = totalGrabAds>0?(totalGrabSales/totalGrabAds).toFixed(2):0;
+
+  const cards = [
+    {label:'Total MKT Spending', value:fmt(totalMKT), sub:'FB + IG + TikTok + KOL + Line + Grab Ads', color:'var(--accent)', badge:{cls:'badge-up',text:'ทั้งหมด'}},
+    {label:'Facebook Ads',       value:fmt(totalFB),  sub:`${(totalFB/totalMKT*100).toFixed(1)}% ของ Total MKT`, color:'var(--fb)', badge:null},
+    {label:'Instagram Ads',      value:fmt(totalIG),  sub:`${(totalIG/totalMKT*100).toFixed(1)}% ของ Total MKT`, color:'var(--ig)', badge:null},
+    {label:'TikTok Ads',         value:fmt(totalTT),  sub:`${(totalTT/totalMKT*100).toFixed(1)}% ของ Total MKT`, color:'var(--tiktok)', badge:null},
+    {label:'Influencer / KOL',   value:fmt(totalKOL), sub:`${(totalKOL/totalMKT*100).toFixed(1)}% ของ Total MKT`, color:'var(--kol)', badge:null},
+    {label:'Line OA',            value:fmt(totalLine),sub:`${(totalLine/totalMKT*100).toFixed(1)}% ของ Total MKT`, color:'var(--line)', badge:null},
+    {label:'Grab Ads',           value:fmt(totalGrabAds), sub:`ROAS ${avgGrabROAS}x · ${totalGrabOrders.toLocaleString()} orders`, color:'var(--grab-ads)', badge:null},
+    {label:'Revenue (All Branches)', value:fmt(totalRev), sub:`MKT Ratio ${ratio.toFixed(2)}% ของยอดขาย`,
+      color:'var(--revenue)',
+      badge:{cls:ratio<3?'badge-up':'badge-down', text:`${ratio.toFixed(2)}% Spend Ratio`}
+    },
+  ];
+
+  document.getElementById('kpi-grid').innerHTML = cards.map(c=>`
+    <div class="kpi-card" style="--accent-color:${c.color}">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="color:${c.color}">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+      ${c.badge?`<div class="kpi-badge ${c.badge.cls}">${c.badge.text}</div>`:''}
+    </div>`).join('');
+}
+
+// ═══════════════ MAIN CHART ═══════════════
+function buildMainChart() {
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+
+  let labels, fbData, igData, ttData, kolData, lineData, grabAdsData, revData;
+
+  if (currentView === 'monthly') {
+    const filt = currentMonth==='all' ? MONTHLY : MONTHLY.filter(d=>d.month.startsWith(currentMonth));
+    labels      = filt.map(d => (MONTH_LABELS[d.month.slice(0,7)]||d.month));
+    fbData      = filt.map(d => d.facebook);
+    igData      = filt.map(d => d.instagram);
+    ttData      = filt.map(d => d.tiktok||0);
+    kolData     = filt.map(d => d.influencer_cost);
+    lineData    = filt.map(d => d.line_cost||0);
+    grabAdsData = filt.map(d => d.grab_ads||0);
+    revData     = filt.map(d => d.revenue);
+    document.getElementById('main-chart-title').textContent = 'MKT Spending vs ยอดขาย (รายเดือน)';
+    document.getElementById('kol-leg').style.display = '';
+    document.getElementById('line-leg').style.display = '';
+    document.getElementById('main-chart-inner').style.minWidth = '';
+  } else {
+    const filt = currentMonth==='all' ? DAILY : DAILY.filter(d=>d.date.startsWith(currentMonth));
+    labels      = filt.map(d=>d.date.slice(5));
+    fbData      = filt.map(d=>d.facebook);
+    igData      = filt.map(d=>d.instagram);
+    ttData      = filt.map(d=>d.tiktok||0);
+    kolData     = null;
+    lineData    = null;
+    grabAdsData = null;
+    revData     = filt.map(d=>d.revenue);
+    document.getElementById('main-chart-title').textContent = 'Daily MKT Spending vs ยอดขาย';
+    document.getElementById('kol-leg').style.display = 'none';
+    document.getElementById('line-leg').style.display = 'none';
+    document.getElementById('main-chart-inner').style.minWidth = Math.max(900,filt.length*16)+'px';
+  }
+
+  const datasets = [
+    {label:'Facebook Ads', data:fbData, backgroundColor:'rgba(24,119,242,0.85)', stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false},
+    {label:'Instagram Ads', data:igData, backgroundColor:'rgba(225,48,108,0.85)', stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false},
+    {label:'TikTok Ads', data:ttData, backgroundColor:'rgba(255,0,80,0.85)', stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false},
+  ];
+  if (kolData)     datasets.push({label:'Influencer',  data:kolData,     backgroundColor:'rgba(167,139,250,0.85)', stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false});
+  if (lineData)    datasets.push({label:'Line OA',     data:lineData,    backgroundColor:'rgba(0,185,0,0.85)',     stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false});
+  if (grabAdsData) datasets.push({label:'Grab Ads',    data:grabAdsData, backgroundColor:'rgba(0,200,83,0.85)',    stack:'s', yAxisID:'y', borderRadius:3, borderSkipped:false});
+  datasets.push({label:'Revenue', data:revData, type:'line', yAxisID:'y2', borderColor:'#34d399', backgroundColor:'rgba(52,211,153,0.07)', borderWidth:2.5, pointRadius:currentView==='monthly'?5:2, pointBackgroundColor:'#34d399', fill:true, tension:0.35, stack:undefined});
+
+  mainChart = new Chart(ctx, {
+    type:'bar', data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)', borderColor:'#2e334d', borderWidth:1,
+          titleColor:'#e8eaf0', bodyColor:'#8892a4', padding:12,
+          callbacks:{label:ctx=>{
+            const v=ctx.raw;
+            return ctx.dataset.label==='Revenue'?` Revenue: ${fmtFull(v)}`:` ${ctx.dataset.label}: ${fmtFull(v)}`;
+          }}
+        }
+      },
+      scales:{
+        x:{stacked:true, grid:{color:'rgba(46,51,77,0.4)'}, ticks:{color:'#8892a4',font:{size:11}}},
+        y:{stacked:true, position:'left', grid:{color:'rgba(46,51,77,0.4)'},
+           ticks:{color:'#8892a4',font:{size:11},callback:v=>fmt(v)},
+           title:{display:true,text:'MKT Spending (฿)',color:'#8892a4',font:{size:10}}},
+        y2:{position:'right', grid:{drawOnChartArea:false},
+            ticks:{color:'#34d399',font:{size:11},callback:v=>fmt(v)},
+            title:{display:true,text:'Revenue (฿)',color:'#34d399',font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ═══════════════ DONUT ═══════════════
+function buildDonut() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  const filt = currentMonth==='all' ? MONTHLY : MONTHLY.filter(d=>d.month.startsWith(currentMonth));
+  const fb   = filt.reduce((s,d)=>s+d.facebook,0);
+  const ig   = filt.reduce((s,d)=>s+d.instagram,0);
+  const tt   = filt.reduce((s,d)=>s+(d.tiktok||0),0);
+  const kol  = filt.reduce((s,d)=>s+d.influencer_cost,0);
+  const line = filt.reduce((s,d)=>s+(d.line_cost||0),0);
+  const grab = filt.reduce((s,d)=>s+(d.grab_ads||0),0);
+  const tot  = fb+ig+tt+kol+line+grab;
+  document.getElementById('donut-total').textContent = fmt(tot);
+  document.getElementById('donut-period').textContent = currentMonth==='all'?'สะสม ม.ค.–ส.ค. 2569':'เดือน '+(MONTH_LABELS[currentMonth]||currentMonth);
+
+  donutChart = new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:['Facebook Ads','Instagram Ads','TikTok Ads','Influencer','Line OA','Grab Ads'],
+      datasets:[{data:[fb,ig,tt,kol,line,grab],backgroundColor:['#1877f2','#e1306c','#ff0050','#a78bfa','#00B900','#00c853'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+        callbacks:{label:ctx=>` ${ctx.label}: ${fmtFull(ctx.raw)} (${(ctx.raw/tot*100).toFixed(1)}%)`}}}}
+  });
+
+  const items=[{label:'Facebook Ads',value:fb,color:'#1877f2'},{label:'Instagram Ads',value:ig,color:'#e1306c'},{label:'TikTok Ads',value:tt,color:'#ff0050'},{label:'Influencer',value:kol,color:'#a78bfa'},{label:'Line OA',value:line,color:'#00B900'},{label:'Grab Ads',value:grab,color:'#00c853'}];
+  document.getElementById('donut-legend').innerHTML = items.map(i=>`
+    <div class="donut-legend-item">
+      <div class="donut-legend-left"><div class="donut-legend-bar" style="background:${i.color}"></div><span style="color:var(--muted)">${i.label}</span></div>
+      <div><span class="donut-legend-val">${fmt(i.value)}</span> <span style="color:var(--muted);font-size:10px">${(i.value/tot*100).toFixed(1)}%</span></div>
+    </div>`).join('');
+}
+
+// ═══════════════ BRANCH CHART ═══════════════
+let branchChartInst = null;
+let branchActive;
+
+function initBranchActive() { if (!branchActive) branchActive = new Set(BRANCHES); }
+
+function buildBranchChips() {
+  initBranchActive();
+  document.getElementById('branch-filter-chips').innerHTML = BRANCHES.map(b=>`
+    <button onclick="toggleBranch('${b.replace(/'/g,"\\'")}')" style="
+      padding:4px 10px;border-radius:99px;border:1.5px solid ${COST_BRANCH_COLORS[b]};
+      background:${branchActive.has(b)?COST_BRANCH_COLORS[b]+'33':'transparent'};
+      color:${branchActive.has(b)?COST_BRANCH_COLORS[b]:'#8892a4'};
+      font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;">
+      ${b}
+    </button>`).join('');
+}
+
+function toggleBranch(b) {
+  if (branchActive.has(b) && branchActive.size===1) return;
+  branchActive.has(b) ? branchActive.delete(b) : branchActive.add(b);
+  buildBranchChips();
+  buildBranchBars();
+}
+
+function buildBranchBars() {
+  initBranchActive();
+  const months  = ['2026-01-01','2026-02-01','2026-03-01','2026-04-01','2026-05-01','2026-06-01','2026-07-01','2026-08-01'];
+  const mLabels = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.'];
+  const isSingle = currentMonth !== 'all';
+  const chartMonths = isSingle ? [currentMonth+'-01'] : months;
+  const chartLabels = isSingle ? [MONTH_LABELS[currentMonth.slice(0,7)]||currentMonth] : mLabels;
+  const activeBr = BRANCHES.filter(b=>branchActive.has(b));
+
+  document.getElementById('branch-period').textContent = currentMonth==='all'?'สะสม ม.ค.–ส.ค. 2569':'เดือน '+(MONTH_LABELS[currentMonth.slice(0,7)]||MONTH_LABELS[currentMonth]||currentMonth);
+
+  // stacked bar chart
+  const ctx = document.getElementById('branchChart').getContext('2d');
+  if (branchChartInst) branchChartInst.destroy();
+  branchChartInst = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: chartLabels,
+      datasets: activeBr.map(b=>({
+        label: b,
+        data: chartMonths.map(m=>{ const row=BRANCH.find(d=>d.month===m); return row?(row[b]||0):0; }),
+        backgroundColor: COST_BRANCH_COLORS[b]+'cc',
+        borderColor: COST_BRANCH_COLORS[b],
+        borderWidth:0,
+        borderRadius:4, borderSkipped:false,
+        stack:'s'
+      }))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+          titleColor:'#e8eaf0',bodyColor:'#8892a4',padding:12,
+          callbacks:{
+            label:c=>` ${c.dataset.label}: ${fmt(c.raw)}`,
+            footer: items => ` รวม: ${fmt(items.reduce((s,i)=>s+i.raw,0))}`
+          }
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8892a4'}},
+        y:{stacked:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#8892a4',callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v}}
+      }
+    }
+  });
+
+  // summary bars (totals across shown data)
+  const allTotals = {};
+  BRANCHES.forEach(b=>{ const rows=isSingle?BRANCH.filter(d=>d.month.startsWith(currentMonth)):BRANCH; allTotals[b]=rows.reduce((s,d)=>s+(d[b]||0),0); });
+  const grandTotal = BRANCHES.reduce((s,b)=>s+allTotals[b],0);
+  const maxVal = Math.max(...BRANCHES.map(b=>allTotals[b]));
+
+  document.getElementById('branch-bars').innerHTML = BRANCHES
+    .sort((a,b)=>allTotals[b]-allTotals[a])
+    .map(b=>{
+      const isOn = branchActive.has(b);
+      return `
+      <div onclick="toggleBranch('${b.replace(/'/g,"\\'")}')" style="cursor:pointer;opacity:${isOn?1:0.35};transition:opacity .2s;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+          <span style="font-size:12px;font-weight:700;color:${COST_BRANCH_COLORS[b]}">${b}</span>
+          <span style="font-size:11px;color:var(--muted)">${fmt(allTotals[b])} <span style="color:${COST_BRANCH_COLORS[b]};font-weight:700">${grandTotal>0?(allTotals[b]/grandTotal*100).toFixed(1):0}%</span></span>
+        </div>
+        <div style="height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${maxVal>0?(allTotals[b]/maxVal*100).toFixed(1):0}%;background:${COST_BRANCH_COLORS[b]};border-radius:99px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ═══════════════ TABLE ═══════════════
+function buildTable() {
+  const maxR = Math.max(...MONTHLY.filter(d=>!d.partial).map(d=>d.mkt_ratio));
+  document.getElementById('table-body').innerHTML = MONTHLY.map(d=>`
+    <tr ${d.partial?'style="opacity:0.7"':''}>
+      <td>${MONTH_LABELS[d.month.slice(0,7)]||d.month}${d.partial?' <span style="font-size:9px;color:var(--muted)">(ยังไม่ครบเดือน)</span>':''}</td>
+      <td style="color:var(--fb)">${fmt(d.facebook)}</td>
+      <td style="color:var(--ig)">${fmt(d.instagram)}</td>
+      <td style="color:var(--tiktok)">${fmt(d.tiktok||0)}</td>
+      <td style="color:var(--kol)">${fmt(d.influencer_cost)}</td>
+      <td style="color:var(--line)">${fmt(d.line_cost||0)}</td>
+      <td style="color:var(--grab-ads)">${fmt(d.grab_ads||0)}</td>
+      <td style="color:#f87171">${d.grab_mkt_fee>0?fmt(d.grab_mkt_fee):'—'}</td>
+      <td style="color:var(--revenue)">${fmt(d.revenue)}</td>
+      <td>
+        <div class="ratio-bar-wrap">
+          <div class="ratio-bar" style="width:${(d.mkt_ratio/maxR*55).toFixed(0)}px"></div>
+          <span style="color:${d.mkt_ratio>3?'var(--danger)':'var(--accent)'};font-weight:700">${d.mkt_ratio.toFixed(2)+'%'}</span>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ═══════════════ CONTROLS ═══════════════
+function setView(v) {
+  currentView = v;
+  document.getElementById('btn-monthly').classList.toggle('active', v==='monthly');
+  document.getElementById('btn-daily').classList.toggle('active',   v==='daily');
+  document.getElementById('filter-bar-wrap').style.display = v==='daily' ? '' : 'none';
+  renderAll();
+}
+function setMonth(m, el) {
+  currentMonth = m;
+  document.querySelectorAll('.month-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+// ═══════════════ CHANNEL SECTION ═══════════════
+let channelChartInst = null;
+let chGran = 'month';
+let chActive = new Set(['walkin','lineman','grab','shopee']);
+
+function setChGran(g) {
+  chGran = g;
+  document.querySelectorAll('#ch-gran-toggle .view-btn').forEach(b=>b.classList.toggle('active', b.dataset.gran===g));
+  buildChannelSection();
+}
+function toggleChannel(ch) {
+  if (chActive.has(ch) && chActive.size === 1) return; // keep at least 1
+  chActive.has(ch) ? chActive.delete(ch) : chActive.add(ch);
+  buildChannelChips();
+  buildChannelSection();
+}
+function buildChannelChips() {
+  document.getElementById('ch-filter-chips').innerHTML = CH_KEYS.map(ch=>`
+    <button onclick="toggleChannel('${ch}')" style="
+      padding:4px 12px;border-radius:99px;border:1.5px solid ${CHANNEL_COLORS[ch]};
+      background:${chActive.has(ch)?CHANNEL_COLORS[ch]+'33':'transparent'};
+      color:${chActive.has(ch)?CHANNEL_COLORS[ch]:'#8892a4'};
+      font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;">
+      ${CHANNEL_LABELS[ch]}
+    </button>`).join('');
+}
+
+function buildChannelSection() {
+  const activeKeys = CH_KEYS.filter(ch=>chActive.has(ch));
+
+  // ── aggregate daily data by chosen granularity ──
+  let raw = CHANNEL_DAILY;
+  // filter by currentMonth if needed
+  if (currentMonth !== 'all') {
+    const prefix = currentMonth.slice(0,7); // "2026-05"
+    raw = raw.filter(d => d.d.startsWith(prefix));
+  }
+
+  let buckets = [];
+  if (chGran === 'day') {
+    buckets = raw.map(d=>({label: d.d.slice(5), walkin:d.w, lineman:d.l, grab:d.g, shopee:d.s}));
+  } else if (chGran === 'week') {
+    const wMap = {};
+    raw.forEach(d=>{
+      const dt = new Date(d.d);
+      const mon = new Date(dt); mon.setDate(dt.getDate() - dt.getDay() + 1); // Monday
+      const key = mon.toISOString().slice(0,10);
+      if (!wMap[key]) wMap[key] = {label:'w/'+key.slice(5,10), walkin:0,lineman:0,grab:0,shopee:0};
+      wMap[key].walkin+=d.w; wMap[key].lineman+=d.l; wMap[key].grab+=d.g; wMap[key].shopee+=d.s;
+    });
+    buckets = Object.values(wMap);
+  } else {
+    const mMap = {};
+    const mNames = {'2026-01':'ม.ค.','2026-02':'ก.พ.','2026-03':'มี.ค.','2026-04':'เม.ย.','2026-05':'พ.ค.','2026-06':'มิ.ย.','2026-07':'ก.ค.','2026-08':'ส.ค.'};
+    raw.forEach(d=>{
+      const key = d.d.slice(0,7);
+      if (!mMap[key]) mMap[key] = {label:mNames[key]||key, walkin:0,lineman:0,grab:0,shopee:0};
+      mMap[key].walkin+=d.w; mMap[key].lineman+=d.l; mMap[key].grab+=d.g; mMap[key].shopee+=d.s;
+    });
+    buckets = Object.values(mMap);
+  }
+
+  const periodTxt = currentMonth==='all'
+    ? (chGran==='day'?'รายวัน ม.ค.–ส.ค. 2569':chGran==='week'?'รายสัปดาห์ ม.ค.–ส.ค. 2569':'รายเดือน ม.ค.–ส.ค. 2569')
+    : 'เดือน '+(MONTH_LABELS[currentMonth.slice(0,7)]||currentMonth)+' · '+{day:'รายวัน',week:'รายสัปดาห์',month:'รายเดือน'}[chGran];
+  document.getElementById('channel-period').textContent = periodTxt;
+
+  // chart
+  const ctx = document.getElementById('channelChart').getContext('2d');
+  if (channelChartInst) channelChartInst.destroy();
+  channelChartInst = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: buckets.map(b=>b.label),
+      datasets: activeKeys.map(ch=>({
+        label: CHANNEL_LABELS[ch],
+        data: buckets.map(b=>b[ch]||0),
+        backgroundColor: CHANNEL_COLORS[ch]+'cc',
+        borderColor: CHANNEL_COLORS[ch],
+        borderWidth: 0,
+        borderRadius: chGran==='month'?5:2,
+        borderSkipped: false,
+        stack:'s'
+      }))
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{label:c=>`${c.dataset.label}: ฿${Math.round(c.raw).toLocaleString()}`}
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#8892a4',maxTicksLimit:chGran==='day'?20:undefined,maxRotation:chGran==='day'?45:0}},
+        y:{stacked:true,grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#8892a4',callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v}}
+      }
+    }
+  });
+
+  // summary bars (total across all shown data)
+  const totals = {};
+  activeKeys.forEach(ch=>totals[ch]=buckets.reduce((s,b)=>s+(b[ch]||0),0));
+  const allKeys = CH_KEYS;
+  const allTotals = {};
+  allKeys.forEach(ch=>allTotals[ch]=buckets.reduce((s,b)=>s+(b[ch]||0),0));
+  const grandTotal = allKeys.reduce((s,ch)=>s+allTotals[ch],0);
+  const maxVal = Math.max(...allKeys.map(ch=>allTotals[ch]));
+
+  document.getElementById('channel-bars').innerHTML = allKeys
+    .sort((a,b)=>allTotals[b]-allTotals[a])
+    .map(ch=>{
+      const isOn = chActive.has(ch);
+      return `
+      <div style="opacity:${isOn?1:0.35};transition:opacity .2s;cursor:pointer;" onclick="toggleChannel('${ch}')">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
+          <span style="font-size:12px;font-weight:700;color:${CHANNEL_COLORS[ch]}">${CHANNEL_LABELS[ch]}</span>
+          <span style="font-size:11px;color:var(--muted)">${fmt(allTotals[ch])}
+            <span style="color:${CHANNEL_COLORS[ch]};font-weight:700">${grandTotal>0?(allTotals[ch]/grandTotal*100).toFixed(1):0}%</span>
+          </span>
+        </div>
+        <div style="height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${maxVal>0?(allTotals[ch]/maxVal*100).toFixed(1):0}%;background:${CHANNEL_COLORS[ch]};border-radius:99px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ═══════════════ GRAB ADS PERFORMANCE ═══════════════
+let grabChartInst = null;
+let grabActiveBranches;
+
+function initGrabBranches() { if (!grabActiveBranches) grabActiveBranches = new Set(GRAB_BRANCHES); }
+function buildGrabChips() {
+  initGrabBranches();
+  document.getElementById('grab-filter-chips').innerHTML = GRAB_BRANCHES.map(br=>`
+    <button onclick="toggleGrabBranch('${br}')" style="
+      padding:4px 12px;border-radius:99px;border:1.5px solid ${GRAB_BRANCH_COLORS[br]};
+      background:${grabActiveBranches.has(br)?GRAB_BRANCH_COLORS[br]+'33':'transparent'};
+      color:${grabActiveBranches.has(br)?GRAB_BRANCH_COLORS[br]:'#8892a4'};
+      font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;">
+      ${br}
+    </button>`).join('');
+}
+function toggleGrabBranch(br) {
+  if (grabActiveBranches.has(br) && grabActiveBranches.size===1) return;
+  grabActiveBranches.has(br) ? grabActiveBranches.delete(br) : grabActiveBranches.add(br);
+  buildGrabChips();
+  buildGrabSection();
+}
+
+function buildGrabSection() {
+  initGrabBranches();
+  // filter by month + active branches
+  const byMonth = currentMonth==='all'
+    ? GRAB_BRANCH_MONTHLY
+    : GRAB_BRANCH_MONTHLY.filter(d=>d.month.startsWith(currentMonth.slice(0,7)));
+  const filt = byMonth.filter(d=>grabActiveBranches.has(d.branch));
+
+  // totals
+  const totSpend  = filt.reduce((s,d)=>s+d.spend,0);
+  const totSales  = filt.reduce((s,d)=>s+d.sales,0);
+  const totOrders = filt.reduce((s,d)=>s+d.orders,0);
+  const totROAS   = totSpend>0?(totSales/totSpend).toFixed(2):0;
+  const cpo       = totOrders>0?(totSpend/totOrders).toFixed(0):0;
+
+  document.getElementById('grab-period').textContent = currentMonth==='all'?'สะสม ม.ค.–ส.ค. 2569':'เดือน '+(MONTH_LABELS[currentMonth.slice(0,7)]||currentMonth);
+
+  // KPI strip
+  document.getElementById('grab-kpis').innerHTML = [
+    {label:'Total Ad Spend',    value:'฿'+Math.round(totSpend).toLocaleString(),         color:'#00c853'},
+    {label:'Ad Generated Sales',value:'฿'+Math.round(totSales).toLocaleString(),         color:'#34d399'},
+    {label:'Total Orders',      value:totOrders.toLocaleString()+' orders',               color:'#f4a742'},
+    {label:'ROAS',              value:totROAS+'x', note:'Cost per order ฿'+Number(cpo).toLocaleString(), color:'#a78bfa'},
+  ].map(k=>`
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${k.color}"></div>
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600">${k.label}</div>
+      <div style="font-size:22px;font-weight:800;margin-top:5px;color:${k.color}">${k.value}</div>
+      ${k.note?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${k.note}</div>`:''}
+    </div>`).join('');
+
+  // chart months
+  const months  = ['2026-01-01','2026-02-01','2026-03-01','2026-04-01','2026-05-01','2026-06-01','2026-07-01','2026-08-01'];
+  const mLabels = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.'];
+  const chartMonths = currentMonth==='all' ? months : [currentMonth];
+  const chartLabels = currentMonth==='all' ? mLabels : [MONTH_LABELS[currentMonth.slice(0,7)]||currentMonth];
+  const activeBrArr = GRAB_BRANCHES.filter(b=>grabActiveBranches.has(b));
+
+  // bars = Ad Sales (stacked by branch) · left axis
+  const salesDatasets = activeBrArr.map(br=>({
+    label: br+' (Sales)',
+    data: chartMonths.map(m=>{
+      const row = GRAB_BRANCH_MONTHLY.find(d=>d.month===m&&d.branch===br);
+      return row&&grabActiveBranches.has(br)?row.sales:0;
+    }),
+    backgroundColor: GRAB_BRANCH_COLORS[br]+'bb',
+    borderColor: GRAB_BRANCH_COLORS[br],
+    borderWidth:0,
+    stack:'sales',
+    yAxisID:'y',
+    borderRadius:3, borderSkipped:false,
+  }));
+
+  // line = Total Ad Spend (active branches only) · right axis
+  const spendLine = {
+    label:'Total Ad Spend',
+    data: chartMonths.map(m=>
+      activeBrArr.reduce((s,br)=>{
+        const row=GRAB_BRANCH_MONTHLY.find(d=>d.month===m&&d.branch===br);
+        return s+(row?row.spend:0);
+      },0)
+    ),
+    type:'line', yAxisID:'y2',
+    borderColor:'#00c853', backgroundColor:'rgba(0,200,83,0.08)',
+    borderWidth:2.5, pointRadius:5, pointBackgroundColor:'#00c853',
+    pointBorderColor:'#fff', pointBorderWidth:1.5,
+    fill:true, tension:0.35, stack:undefined
+  };
+
+  const ctx = document.getElementById('grabChart').getContext('2d');
+  if (grabChartInst) grabChartInst.destroy();
+  grabChartInst = new Chart(ctx,{
+    type:'bar',
+    data:{labels:chartLabels, datasets:[...salesDatasets, spendLine]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(20,23,34,0.97)',borderColor:'#2e334d',borderWidth:1,
+          titleColor:'#e8eaf0',bodyColor:'#8892a4',padding:12,
+          callbacks:{label:c=>` ${c.dataset.label}: ฿${Math.round(c.raw).toLocaleString()}`}
+        }
+      },
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(46,51,77,0.3)'},ticks:{color:'#8892a4'}},
+        y:{stacked:true,position:'left',grid:{color:'rgba(46,51,77,0.3)'},
+          ticks:{color:'#8892a4',callback:v=>fmt(v)},
+          title:{display:true,text:'Ad Generated Sales (฿)',color:'#8892a4',font:{size:10}}},
+        y2:{position:'right',grid:{drawOnChartArea:false},
+          ticks:{color:'#00c853',callback:v=>fmt(v)},
+          title:{display:true,text:'Ad Spend (฿)',color:'#00c853',font:{size:10}}}
+      }
+    }
+  });
+
+  // Branch summary cards
+  const branchTotals = {};
+  GRAB_BRANCHES.forEach(br=>{
+    const rows = byMonth.filter(d=>d.branch===br);
+    branchTotals[br]={spend:rows.reduce((s,d)=>s+d.spend,0),sales:rows.reduce((s,d)=>s+d.sales,0),orders:rows.reduce((s,d)=>s+d.orders,0)};
+    branchTotals[br].roas=branchTotals[br].spend>0?(branchTotals[br].sales/branchTotals[br].spend).toFixed(2):0;
+  });
+  const maxSales = Math.max(...GRAB_BRANCHES.map(b=>branchTotals[b].sales));
+
+  document.getElementById('grab-branch-list').innerHTML = GRAB_BRANCHES
+    .filter(b=>branchTotals[b].spend>0)
+    .sort((a,b)=>branchTotals[b].sales-branchTotals[a].sales)
+    .map(br=>{
+      const t = branchTotals[br];
+      const color = GRAB_BRANCH_COLORS[br];
+      const isOn = grabActiveBranches.has(br);
+      return `
+      <div onclick="toggleGrabBranch('${br}')" style="cursor:pointer;opacity:${isOn?1:0.4};transition:opacity .2s;
+        background:var(--surface2);border:1.5px solid ${isOn?color:'var(--border)'};border-radius:10px;padding:12px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:700;color:${color}">${br}</span>
+          <span style="font-size:12px;font-weight:800;color:#a78bfa">ROAS ${t.roas}x</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:7px;">
+          <span>Spend: <b style="color:#00c853">${fmt(t.spend)}</b></span>
+          <span>Sales: <b style="color:${color}">${fmt(t.sales)}</b></span>
+          <span>Orders: <b style="color:#f4a742">${t.orders}</b></span>
+        </div>
+        <div style="height:6px;background:var(--surface);border-radius:99px;overflow:hidden;">
+          <div style="height:100%;width:${maxSales>0?(t.sales/maxSales*100).toFixed(1):0}%;background:${color};border-radius:99px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function renderAll() {
+  buildKPIs(); buildMainChart(); buildDonut();
+  buildBranchChips(); buildBranchBars(); buildTable();
+  buildChannelChips(); buildChannelSection();
+  buildGrabChips(); buildGrabSection();
+}
+
+renderAll();
+
+// ── GRAB COST STRUCTURE ──────────────────────────────────────────
+const GRAB_COST = {
+  "2026-02": { _all:{gmv:770582,ch_comm:46489,ord_comm:39174,mkt_fee:0,ads:8986,net:675933,eff:12.3},
+    "ลาซาล":{gmv:320973,ch_comm:35682,ord_comm:0,mkt_fee:0,ads:7801,net:277490,eff:13.5,orders:1007,aov:319},
+    "CTW":{gmv:139183,ch_comm:0,ord_comm:15472,mkt_fee:0,ads:0,net:123710,eff:11.1,orders:391,aov:356},
+    "Thonglor":{gmv:213204,ch_comm:0,ord_comm:23701,mkt_fee:0,ads:1184,net:188319,eff:11.7,orders:659,aov:324},
+    "The Circle":{gmv:97222,ch_comm:10808,ord_comm:0,mkt_fee:0,ads:0,net:86414,eff:11.1,orders:322,aov:302}},
+  "2026-03": { _all:{gmv:956342,ch_comm:57561,ord_comm:48752,mkt_fee:0,ads:21190,net:828838,eff:13.3},
+    "ลาซาล":{gmv:355676,ch_comm:39539,ord_comm:0,mkt_fee:0,ads:10126,net:306010,eff:14.0,orders:1114,aov:319},
+    "CTW":{gmv:192163,ch_comm:0,ord_comm:21362,mkt_fee:0,ads:2743,net:168058,eff:12.5,orders:575,aov:334},
+    "Thonglor":{gmv:246390,ch_comm:0,ord_comm:27390,mkt_fee:0,ads:5049,net:213951,eff:13.2,orders:722,aov:341},
+    "The Circle":{gmv:162113,ch_comm:18022,ord_comm:0,mkt_fee:0,ads:3272,net:140820,eff:13.1,orders:532,aov:305}},
+  "2026-04": { _all:{gmv:782227,ch_comm:47996,ord_comm:38962,mkt_fee:0,ads:24235,net:671035,eff:14.2},
+    "ลาซาล":{gmv:292026,ch_comm:32464,ord_comm:0,mkt_fee:0,ads:9801,net:249762,eff:14.5,orders:935,aov:312},
+    "CTW":{gmv:163850,ch_comm:0,ord_comm:18215,mkt_fee:0,ads:4719,net:140917,eff:14.0,orders:490,aov:334},
+    "Thonglor":{gmv:186628,ch_comm:0,ord_comm:20747,mkt_fee:0,ads:4860,net:161021,eff:13.7,orders:616,aov:303},
+    "The Circle":{gmv:139723,ch_comm:15532,ord_comm:0,mkt_fee:0,ads:4856,net:119334,eff:14.6,orders:481,aov:290}},
+  "2026-05": { _all:{gmv:1079243,ch_comm:60673,ord_comm:59304,mkt_fee:0,ads:27845,net:931421,eff:13.7},
+    "ลาซาล":{gmv:388879,ch_comm:43231,ord_comm:0,mkt_fee:0,ads:12853,net:332795,eff:14.4,orders:1274,aov:305},
+    "CTW":{gmv:267727,ch_comm:0,ord_comm:29763,mkt_fee:0,ads:4961,net:233004,eff:13.0,orders:796,aov:336},
+    "Thonglor":{gmv:265739,ch_comm:0,ord_comm:29541,mkt_fee:0,ads:5005,net:231192,eff:13.0,orders:869,aov:306},
+    "The Circle":{gmv:156898,ch_comm:17442,ord_comm:0,mkt_fee:0,ads:5026,net:134430,eff:14.3,orders:521,aov:301}},
+  "2026-06": { _all:{gmv:972229,ch_comm:55990,ord_comm:58822,mkt_fee:60553,ads:32135,net:764729,eff:21.3},
+    "ลาซาล":{gmv:330994,ch_comm:38898,ord_comm:0,mkt_fee:18913,ads:13113,net:260070,eff:21.4,orders:1130,aov:293},
+    "CTW":{gmv:234370,ch_comm:0,ord_comm:27980,mkt_fee:17324,ads:4856,net:184209,eff:21.4,orders:769,aov:305},
+    "Thonglor":{gmv:261559,ch_comm:0,ord_comm:30842,mkt_fee:15879,ads:9303,net:205535,eff:21.4,orders:902,aov:290},
+    "The Circle":{gmv:145306,ch_comm:17091,ord_comm:0,mkt_fee:8438,ads:4862,net:114915,eff:20.9,orders:541,aov:269}},
+  "2026-07": { _all:{gmv:1096277,ch_comm:54700,ord_comm:70980,mkt_fee:34278,ads:33314,net:903004,eff:17.6},
+    "ลาซาล":{gmv:333717,ch_comm:37098,ord_comm:0,mkt_fee:0,ads:13548,net:283071,eff:15.2,orders:1107,aov:301},
+    "CTW":{gmv:276708,ch_comm:0,ord_comm:32240,mkt_fee:13302,ads:4829,net:226337,eff:18.2,orders:851,aov:325},
+    "Thonglor":{gmv:334056,ch_comm:0,ord_comm:38741,mkt_fee:14433,ads:9890,net:270992,eff:18.9,orders:1095,aov:305},
+    "The Circle":{gmv:151796,ch_comm:17602,ord_comm:0,mkt_fee:6543,ads:5047,net:122604,eff:19.2,orders:588,aov:258}}
+};
+
+const COST_MONTHS = ['2026-02','2026-03','2026-04','2026-05','2026-06','2026-07'];
+const COST_LABELS = {'2026-02':'ก.พ.','2026-03':'มี.ค.','2026-04':'เม.ย.','2026-05':'พ.ค.','2026-06':'มิ.ย.','2026-07':'ก.ค.'};
+const BRANCHES_COST = ['ลาซาล','CTW','Thonglor','The Circle'];
+
+let costMonthSel = '2026-07';
+let costStackInst = null, effFeeInst = null;
+
+function buildCostStack() {
+  const ctx = document.getElementById('costStackChart').getContext('2d');
+  if (costStackInst) costStackInst.destroy();
+  const labels = COST_MONTHS.map(m => COST_LABELS[m]);
+  const nets    = COST_MONTHS.map(m => GRAB_COST[m]._all.net);
+  const chs     = COST_MONTHS.map(m => GRAB_COST[m]._all.ch_comm);
+  const ords    = COST_MONTHS.map(m => GRAB_COST[m]._all.ord_comm);
+  const mkts    = COST_MONTHS.map(m => GRAB_COST[m]._all.mkt_fee);
+  const adss    = COST_MONTHS.map(m => GRAB_COST[m]._all.ads);
+  costStackInst = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Net Payout',data:nets,backgroundColor:'#34d399',stack:'s'},
+      {label:'Channel Comm',data:chs,backgroundColor:'#f4a742',stack:'s'},
+      {label:'Order Comm',data:ords,backgroundColor:'#f97316',stack:'s'},
+      {label:'Mkt Success Fee',data:mkts,backgroundColor:'#f87171',stack:'s'},
+      {label:'Ads Spend',data:adss,backgroundColor:'#60a5fa',stack:'s'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ฿${Math.round(c.raw).toLocaleString()}`}}},
+      scales:{
+        x:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8892a4',font:{size:12}}},
+        y:{stacked:true,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8892a4',font:{size:11},callback:v=>'฿'+(v/1000).toFixed(0)+'K'}}
+      }}
+  });
+}
+
+function buildEffFee() {
+  const ctx = document.getElementById('effFeeChart').getContext('2d');
+  if (effFeeInst) effFeeInst.destroy();
+  const labels = COST_MONTHS.map(m => COST_LABELS[m]);
+  const datasets = BRANCHES_COST.map(b => ({
+    label:b,
+    data: COST_MONTHS.map(m => GRAB_COST[m][b] ? GRAB_COST[m][b].eff : null),
+    borderColor: COST_BRANCH_COLORS[b],
+    backgroundColor: COST_BRANCH_COLORS[b],
+    borderWidth:2, pointRadius:4, pointBorderColor:'#1a1d27', pointBorderWidth:2,
+    tension:0.3, fill:false
+  }));
+  effFeeInst = new Chart(ctx, {
+    type:'line',
+    data:{labels, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{color:'#8892a4',font:{size:10},boxWidth:10,padding:10}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8892a4',font:{size:11}}},
+        y:{min:0,max:25,grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8892a4',font:{size:11},callback:v=>v+'%'}}
+      }}
+  });
+}
+
+function buildCostMonthChips() {
+  const wrap = document.getElementById('cost-month-chips');
+  wrap.innerHTML = COST_MONTHS.map(m =>
+    `<button class="month-btn${m===costMonthSel?' active':''}" onclick="setCostMonth('${m}',this)">${COST_LABELS[m]}</button>`
+  ).join('');
+}
+
+function setCostMonth(m, el) {
+  costMonthSel = m;
+  document.querySelectorAll('#cost-month-chips .month-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  buildCostTable();
+}
+
+function buildCostTable() {
+  const d = GRAB_COST[costMonthSel];
+  const fmt = v => v > 0 ? '฿'+Math.round(v).toLocaleString() : '—';
+  const fmtP = v => v > 0 ? v.toFixed(1)+'%' : '—';
+  const effColor = v => v >= 20 ? '#f87171' : v >= 16 ? '#f4a742' : '#34d399';
+  let html = `<table class="data-table"><thead><tr>
+    <th>สาขา</th><th>GMV</th><th>Ch. Comm</th><th>Order Comm</th><th>Mkt Success Fee</th><th>Ads Spend</th><th>Total Cost</th><th>Net Payout</th><th>Eff. Fee%</th><th>AOV</th><th>Orders</th>
+  </tr></thead><tbody>`;
+  for (const b of BRANCHES_COST) {
+    if (!d[b]) continue;
+    const r = d[b];
+    const totalCost = r.gmv - r.net;
+    html += `<tr>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${COST_BRANCH_COLORS[b]};margin-right:6px;"></span>${b}</td>
+      <td>${fmt(r.gmv)}</td>
+      <td style="color:#f4a742">${fmt(r.ch_comm)}</td>
+      <td style="color:#f97316">${fmt(r.ord_comm)}</td>
+      <td style="color:${r.mkt_fee>0?'#f87171':'#8892a4'}">${fmt(r.mkt_fee)}</td>
+      <td style="color:#60a5fa">${fmt(r.ads)}</td>
+      <td>${fmt(totalCost)}</td>
+      <td style="color:#34d399">${fmt(r.net)}</td>
+      <td style="color:${effColor(r.eff)};font-weight:700">${fmtP(r.eff)}</td>
+      <td>฿${r.aov.toLocaleString()}</td>
+      <td>${r.orders.toLocaleString()}</td>
+    </tr>`;
+  }
+  // Total row
+  const t = d._all;
+  html += `<tr style="border-top:1px solid var(--border);font-weight:700">
+    <td>รวมทุกสาขา</td>
+    <td>${fmt(t.gmv)}</td>
+    <td style="color:#f4a742">${fmt(t.ch_comm)}</td>
+    <td style="color:#f97316">${fmt(t.ord_comm)}</td>
+    <td style="color:${t.mkt_fee>0?'#f87171':'#8892a4'}">${fmt(t.mkt_fee)}</td>
+    <td style="color:#60a5fa">${fmt(t.ads)}</td>
+    <td>${fmt(t.gmv-t.net)}</td>
+    <td style="color:#34d399">${fmt(t.net)}</td>
+    <td style="color:${effColor(t.eff)};font-weight:700">${fmtP(t.eff)}</td>
+    <td>—</td><td>—</td>
+  </tr>`;
+  html += '</tbody></table>';
+  document.getElementById('cost-table-wrap').innerHTML = html;
+}
+
+buildCostStack();
+buildEffFee();
+buildCostMonthChips();
+buildCostTable();
+
+// ── GRAB DAILY (Aug 4–10, dedup Aug 4 from new Transaction file) ─────────────
+const GRAB_DAILY = [
+  {date:'4 ส.ค.',  gmv:38850,  ch_comm:1267.09, ord_comm:2619.69, mkt_fee:1220.87, ads:1011.77, orders:109},
+  {date:'5 ส.ค.',  gmv:42345,  ch_comm:1407.64, ord_comm:2828.79, mkt_fee:1902.46, ads:960.42,  orders:117},
+  {date:'6 ส.ค.',  gmv:52795,  ch_comm:2185.46, ord_comm:3096.42, mkt_fee:2351.86, ads:614.04,  orders:150},
+  {date:'7 ส.ค.',  gmv:51260,  ch_comm:1556.69, ord_comm:3571.63, mkt_fee:1850.03, ads:617.92,  orders:142},
+  {date:'8 ส.ค.',  gmv:46625,  ch_comm:2204.46, ord_comm:2460.17, mkt_fee:1550.43, ads:611.85,  orders:127},
+  {date:'9 ส.ค.',  gmv:40150,  ch_comm:1822.35, ord_comm:2194.52, mkt_fee:2067.24, ads:541.07,  orders:134},
+  {date:'10 ส.ค.', gmv:47370,  ch_comm:1887.38, ord_comm:2851.78, mkt_fee:1647.80, ads:538.91,  orders:130}
+];
+
+function buildDailyTable() {
+  const fmt  = v => v > 0 ? '฿'+Math.round(v).toLocaleString() : '—';
+  const fmtP = v => v.toFixed(1) + '%';
+  const pctColor = v => v >= 18 ? '#f87171' : v >= 15 ? '#f4a742' : '#34d399';
+
+  let totalGmv=0, totalCh=0, totalOrd=0, totalMkt=0, totalAds=0, totalOrd2=0;
+  GRAB_DAILY.forEach(r => {
+    totalGmv+=r.gmv; totalCh+=r.ch_comm; totalOrd+=r.ord_comm;
+    totalMkt+=r.mkt_fee; totalAds+=r.ads; totalOrd2+=r.orders;
+  });
+  const totalCost = totalCh+totalOrd+totalMkt;
+  const totalAll  = totalCost+totalAds;
+
+  let html = `<table class="data-table"><thead><tr>
+    <th>วัน</th><th>GMV (Net Sales)</th><th>Ch. Comm</th><th>Order Comm</th><th>Mkt Success Fee</th><th>Ads Spend</th><th>รวมต้นทุน</th><th>%ต้นทุน (excl.Ads)</th><th>%ต้นทุน (incl.Ads)</th><th>Orders</th>
+  </tr></thead><tbody>`;
+
+  for (const r of GRAB_DAILY) {
+    const cost = r.ch_comm + r.ord_comm + r.mkt_fee;
+    const all  = cost + r.ads;
+    html += `<tr>
+      <td style="font-weight:600">${r.date}</td>
+      <td>${fmt(r.gmv)}</td>
+      <td style="color:#f4a742">${fmt(r.ch_comm)}</td>
+      <td style="color:#f97316">${fmt(r.ord_comm)}</td>
+      <td style="color:#f87171">${fmt(r.mkt_fee)}</td>
+      <td style="color:#60a5fa">${fmt(r.ads)}</td>
+      <td style="font-weight:600">${fmt(all)}</td>
+      <td style="color:${pctColor(cost/r.gmv*100)};font-weight:700">${fmtP(cost/r.gmv*100)}</td>
+      <td style="color:${pctColor(all/r.gmv*100)};font-weight:700">${fmtP(all/r.gmv*100)}</td>
+      <td>${r.orders}</td>
+    </tr>`;
+  }
+
+  const avgPct     = totalCost / totalGmv * 100;
+  const avgPctAll  = totalAll  / totalGmv * 100;
+  html += `<tr style="border-top:1px solid var(--border);font-weight:700">
+    <td>รวม 4–10 ส.ค.</td>
+    <td>${fmt(totalGmv)}</td>
+    <td style="color:#f4a742">${fmt(totalCh)}</td>
+    <td style="color:#f97316">${fmt(totalOrd)}</td>
+    <td style="color:#f87171">${fmt(totalMkt)}</td>
+    <td style="color:#60a5fa">${fmt(totalAds)}</td>
+    <td>${fmt(totalAll)}</td>
+    <td style="color:${pctColor(avgPct)};font-weight:700">${fmtP(avgPct)}</td>
+    <td style="color:${pctColor(avgPctAll)};font-weight:700">${fmtP(avgPctAll)}</td>
+    <td>${totalOrd2}</td>
+  </tr>`;
+  html += '</tbody></table>';
+  document.getElementById('grab-daily-wrap').innerHTML = html;
+}
+
+buildDailyTable();
+</script>
+</body>
+</html>
